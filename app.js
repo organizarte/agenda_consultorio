@@ -241,7 +241,7 @@ function ingresarGoogle(btn){
   var e=$('#gErr');if(e)e.textContent='';
   if(!GCLIENT){if(e)e.textContent='Falta configurar el ID de Google en config.js.';return;}
   var primera=!USER;
-  pedirToken(primera?'consent':'').then(function(){
+  pedirToken('').then(function(){
     if(e)e.textContent='Abriendo tu agenda…';
     return gfetch('https://www.googleapis.com/oauth2/v3/userinfo');
   }).then(function(u){
@@ -252,7 +252,7 @@ function ingresarGoogle(btn){
     var p=store(claveU('pend'));if(p&&p.datos){aplicarDatos(p.datos,p.base,true);PENDIENTE=true;}
     if(!CFG.emailCuenta)CFG.emailCuenta=email;
     var dst=S.destino&&S.destino!=='ingresar'?S.destino:'inicio';S.destino=null;
-    location.hash=dst;render();
+    location.hash=dst;susCargar();render();susUI();verificarSus(true);
     return iniciarPlanilla();
   }).catch(function(err){
     var m=err&&err.error==='permiso'?'Para usar la agenda tenés que permitir que guarde su planilla en tu Drive. Probá de nuevo y marcá esa opción.':
@@ -331,13 +331,14 @@ function aplicarDatos(d,version,local){
 function estadoGuardado(txt,cls){$$('[data-sync]').forEach(function(e){e.textContent=txt;e.className='sync '+(cls||'');});}
 function guardarPronto(){
   if(!S.logged||!ULTIMO)return;
+  if(soloLectura()){var j0=JSON.stringify(estadoDatos());if(j0!==ULTIMO&&!PENDIENTE){aplicarDatos(JSON.parse(ULTIMO),null,true);}return;}
   var j=JSON.stringify(estadoDatos());if(j===ULTIMO&&!PENDIENTE)return;
   if(j!==ULTIMO){PENDIENTE=true;store(claveU('pend'),{datos:JSON.parse(j),base:VERSION});}
   estadoGuardado('Guardando…','');
   clearTimeout(_tGuardar);_tGuardar=setTimeout(enviar,1800);
 }
 function enviar(){
-  if(ENVIANDO||!PENDIENTE||!SSID)return;
+  if(ENVIANDO||!PENDIENTE||!SSID||soloLectura())return;
   if(!tokenOk()){mostrarReconectar(true);return;}
   ENVIANDO=true;
   var j=JSON.stringify(estadoDatos()),base=VERSION;
@@ -826,7 +827,7 @@ function recordatoriosV(){
   function plant(k){return '<div class="plant"><div class="card-h"><h3>'+REC_TIPO[k]+'</h3><span class="note">'+({turno:'Al agendar, con el botón WhatsApp del turno',semana:'7 días antes',sesion:'Día anterior · confirmados',confirmar:'Día anterior · sin confirmar',enlace:'Día anterior · virtuales'})[k]+'</span></div><textarea data-plant="'+k+'" aria-label="Plantilla '+REC_TIPO[k]+'">'+esc(PLANT[k])+'</textarea><div class="vars">'+['paciente','fecha','hora','profesional','enlace','calendario'].map(function(v){return '<button type="button" data-var="'+v+'" data-k="'+k+'">{'+v+'}</button>';}).join('')+'</div><div class="note">Vista previa:</div><div class="burbuja" data-prev="'+k+'">'+esc(textoRec(k,ej))+'</div></div>';}
   function tb(id,l,n){return '<button data-recf="'+id+'" aria-pressed="'+(S.recf===id)+'">'+l+'<span class="c">'+n+'</span></button>';}
   return '<header class="head"><div><h1>Recordatorios</h1><div class="sub">Cada turno se recuerda solo: una semana antes y el día anterior.</div></div></header>'+
-  '<div class="cols"><section class="card" style="gap:14px"><div class="toolbar"><div class="tabs" role="group">'+tb('proximos','Programados',prog.length)+tb('enviados','Enviados',env.length)+'</div></div>'+filas+'<div class="note">En esta etapa el envío es simulado: todavía no se conectó WhatsApp ni el correo.</div></section>'+
+  '<div class="cols"><section class="card" style="gap:14px"><div class="toolbar"><div class="tabs" role="group">'+tb('proximos','Programados',prog.length)+tb('enviados','Enviados',env.length)+'</div></div>'+filas+'<div class="note">Los avisos no salen solos: cuando llega el día, tocá <b>Enviar ahora</b> y se abre WhatsApp con el mensaje listo para mandar.</div></section>'+
   '<div style="display:flex;flex-direction:column;gap:24px"><section class="card" style="padding:24px;gap:0"><h2 style="font-size:22px;margin-bottom:8px">Ajustes</h2>'+
   '<label class="sw"><span class="txt">Recordatorios automáticos<span>Se programan solos al agendar un turno</span></span><input type="checkbox" data-cfgset="autoRec"'+(CFG.autoRec?' checked':'')+'></label>'+
   '<label class="sw"><span class="txt">Una semana antes<span>Aviso 7 días antes de cada turno</span></span><input type="checkbox" data-cfgset="avisoSemana"'+(CFG.avisoSemana?' checked':'')+'></label>'+
@@ -915,6 +916,90 @@ function authV(modo){
 
 /* ================= OTRAS ================= */
 function mas(){return '<header class="head"><h1>Más</h1></header><div class="card" style="gap:4px">'+[['recordatorios','Recordatorios','i-bell'],['configuracion','Configuración','i-set']].map(function(n){return '<button class="nav-a" data-go="'+n[0]+'">'+ico(n[2])+n[1]+'</button>';}).join('')+'<button class="nav-a" data-salir>'+ico('i-logout')+'Cerrar sesión</button></div>';}
+
+/* ================= SUSCRIPCIÓN (portero) =================
+   Si config.js tiene AP_PORTERO_URL, la app le pregunta al portero si esta cuenta puede cargar datos.
+   Al portero solo se le manda una credencial de identidad de Google (qué Gmail es), nunca acceso al Drive. */
+var PORTERO=window.AP_PORTERO_URL||'',PRECIO_TXT='$10.000';
+var SUS=null,SUS_VERIF=false,SUS_ERR='',_idCb=null,_idInit=false,_idTok=null;
+function susCargar(){SUS=USER?store(claveU('sus')):null;}
+function soloLectura(){return !!(PORTERO&&S.logged&&!(SUS&&SUS.acceso));}
+function idToken(){
+  if(_idTok&&_idTok.exp>Date.now()+120000)return Promise.resolve(_idTok.t);
+  return cargarGSI().then(function(){return new Promise(function(ok,mal){
+    if(!_idInit){
+      google.accounts.id.initialize({client_id:GCLIENT,auto_select:true,use_fedcm_for_prompt:true,cancel_on_tap_outside:false,login_hint:USER?USER.email:'',
+        callback:function(r){var t=r&&r.credential;if(!t)return;var exp=Date.now()+55*60000;try{exp=JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).exp*1000;}catch(e){}
+          _idTok={t:t,exp:exp};var c=_idCb;_idCb=null;if(c)c.ok(t);else susConToken(t);}});
+      _idInit=true;
+    }
+    var yo={ok:ok,mal:mal};_idCb=yo;
+    try{google.accounts.id.prompt();}catch(e){}
+    setTimeout(function(){if(_idCb===yo){_idCb=null;mal({error:'onetap'});}},12000);
+  });});
+}
+function porteroGet(par){
+  var q=Object.keys(par).map(function(k){return k+'='+encodeURIComponent(par[k]);}).join('&');
+  return fetch(PORTERO+'?'+q).then(function(r){return r.json();});
+}
+function verificarSus(forzar){
+  if(!PORTERO||!S.logged||SUS_VERIF)return;
+  if(!forzar&&SUS&&SUS.acceso&&Date.now()-SUS.chk<6*3600000)return;
+  if(!forzar&&SUS&&!SUS.acceso&&Date.now()-SUS.chk<5*60000)return;
+  SUS_VERIF=true;SUS_ERR='';susUI();
+  idToken().then(susConToken,function(){SUS_VERIF=false;SUS_ERR='identidad';susUI();});
+}
+function susConToken(t){
+  SUS_VERIF=true;
+  porteroGet({a:'estado',t:t}).then(function(r){
+    SUS_VERIF=false;if(!r||!r.ok)throw r;
+    var antes=soloLectura();
+    SUS={estado:r.estado,acceso:!!r.acceso,vence:r.vence||'',chk:Date.now()};store(claveU('sus'),SUS);SUS_ERR='';
+    if(r.precio)PRECIO_TXT='$'+(+r.precio).toLocaleString('es-AR');
+    susUI();if(antes&&!soloLectura()){toast('Suscripción activa. ¡Gracias!');if(PENDIENTE||ULTIMO)guardarPronto();}
+  }).catch(function(){SUS_VERIF=false;SUS_ERR='portero';susUI();});
+}
+function susUI(){
+  document.body.classList.toggle('sololectura',soloLectura());
+  var b=$('#susbar');if(!b)return;
+  if(!soloLectura()){b.hidden=true;return;}
+  var txt,btn='';
+  if(SUS_VERIF&&!SUS){txt='Verificando tu suscripción…';}
+  else if(SUS_ERR&&!SUS){txt='No pudimos verificar tu suscripción. Mientras tanto podés ver tus datos, pero no cargar nuevos.';btn='<div id="susG"></div><button type="button" class="btn-ghost" data-sus="verificar">Reintentar</button>';}
+  else{txt=SUS&&/pendiente/i.test(SUS.estado)?'Tu pago está en proceso. Cuando Mercado Pago lo apruebe se habilita la carga de datos.':'Tu suscripción no está activa: podés ver tus datos, pero no cargar nuevos ni enviar mensajes.';
+    btn=(SUS&&/pendiente/i.test(SUS.estado)?'<button type="button" class="btn-ghost" data-sus="verificar">Ya pagué</button>':'')+'<button type="button" class="btn-primary" data-sus="abrir">Suscribirme</button>';}
+  b.innerHTML='<span>'+txt+'</span><div class="susbtns">'+btn+'</div>';b.hidden=false;
+  var g=$('#susG');if(g&&window.google&&google.accounts&&google.accounts.id&&_idInit){try{google.accounts.id.renderButton(g,{type:'standard',theme:'outline',size:'medium',shape:'pill',text:'continue_with',locale:'es'});}catch(e){}}
+}
+function susAbrir(){
+  $('#susPrecio').textContent=PRECIO_TXT;
+  var f=$('#fSus');f.mp.value=(SUS&&SUS.mp)||(USER?USER.email:'');$('#susErr').textContent='';
+  openOv('#ovSus');
+}
+function susPagar(f){
+  var mp=f.mp.value.trim(),btn=f.querySelector('button[type=submit]'),err=$('#susErr');
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mp)){err.textContent='Revisá el mail.';return;}
+  btn.disabled=true;err.textContent='Preparando el pago…';
+  idToken().then(function(t){return porteroGet({a:'suscribir',t:t,mp:mp});}).then(function(r){
+    if(r&&r.url){location.href=r.url;return;}
+    btn.disabled=false;
+    if(r&&(r.gratis||r.yaActiva)){closeOv();verificarSus(true);return;}
+    err.textContent='No se pudo preparar el pago'+(r&&r.error?' ('+esc(r.error)+')':'')+'. Probá de nuevo.';
+  }).catch(function(){btn.disabled=false;err.textContent='No se pudo conectar. Revisá internet y probá de nuevo.';});
+}
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'&&S.logged)verificarSus(false);});
+// Lo que no se puede hacer en modo "solo ver"
+var BLOQ_SOLO='[data-npac],[data-epac],[data-nuevo],[data-slot],[data-pagar],[data-wturno],[data-rec],[data-accion],[data-lugar],[data-tema],[data-logo],[data-ilus],[data-quitarlogo],[data-xatema],[data-xlpal],[data-var],[data-dia-at],[data-copiaya],[data-ea],[data-eah]';
+function avisoSolo(){toast('Para cargar datos o enviar mensajes, activá tu suscripción.');susUI();}
+document.addEventListener('click',function(e){
+  var s=e.target.closest('[data-sus]');
+  if(s){e.preventDefault();var a=s.getAttribute('data-sus');if(a==='abrir')susAbrir();else verificarSus(true);return;}
+  if(soloLectura()&&e.target.closest(BLOQ_SOLO)){e.preventDefault();e.stopImmediatePropagation();avisoSolo();}
+},true);
+document.addEventListener('submit',function(e){
+  if(e.target.id==='fSus'){e.preventDefault();e.stopImmediatePropagation();susPagar(e.target);return;}
+  if(soloLectura()){e.preventDefault();e.stopImmediatePropagation();closeOv();avisoSolo();}
+},true);
 
 /* ================= PIN DE BLOQUEO =================
    El PIN es de cada dispositivo: se guarda (como huella, no el número) en este navegador. */
@@ -1217,7 +1302,10 @@ aplicarTema();
     var c=store(claveU('cache'));if(c&&c.datos)aplicarDatos(c.datos,c.version,true);
     var pend=store(claveU('pend'));if(pend&&pend.datos){aplicarDatos(pend.datos,pend.base,true);PENDIENTE=true;}
   }
-  render();
+  susCargar();
+  render();susUI();
+  if(/[?&]pago=/.test(location.search)){try{history.replaceState(null,'',location.pathname+location.hash);}catch(e){}}
+  if(USER&&S.logged){verificarSus(true);}
   if(USER&&S.logged&&pinDatos())bloquear();
   if(USER){if(tokenOk())iniciarPlanilla();else mostrarReconectar(true);}
 })();
