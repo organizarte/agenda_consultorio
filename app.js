@@ -165,6 +165,34 @@ function linkCalendario(t){
   var lugar=t.mod==='v'?(CFG.enlace||''):(CFG.dir||'');
   var o={f:t.fecha,h:t.hora,m:t.mod,k:CFG.tema||'salvia',i:letra()};if(durMin(t)!==50)o.d=durMin(t);if(lugar)o.l=lugar;if(CFG.prof)o.p=CFG.prof;if(CFG.marca&&CFG.marca!=='Agenda Psicológica')o.c=CFG.marca;var c=[o.f.replace(/-/g,'').slice(2),o.h.replace(':',''),o.m||'',o.k==='salvia'?'':o.k,o.i||'',o.d||'',o.l||'',o.p||'',o.c||''].map(function(x){return String(x).replace(/\|/g,'/');}).join('|').replace(/\|+$/,'');var b=btoa(unescape(encodeURIComponent(c))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');return baseApp()+'turno.html#2'+b;
 }
+var VARS={paciente:'Nombre del paciente',fecha:'Fecha',hora:'Hora',profesional:'Tu nombre',enlace:'Enlace de videollamada',calendario:'Link al calendario'};
+function chipVar(v){return '<span class="var" contenteditable="false" data-v="'+v+'">'+esc(VARS[v]||v)+'</span>';}
+function plantHtml(t){return esc(t||'').replace(/\{(\w+)\}/g,function(m,v){return VARS[v]?chipVar(v):m;}).replace(/\n/g,'<br>');}
+function plantTexto(el){
+  var out='';
+  Array.prototype.forEach.call(el.childNodes,function(n){
+    if(n.nodeType===3)out+=n.nodeValue.replace(/ /g,' ');
+    else if(n.nodeType===1){
+      if(n.getAttribute('data-v'))out+='{'+n.getAttribute('data-v')+'}';
+      else if(n.tagName==='BR')out+='\n';
+      else if(n.tagName==='DIV'||n.tagName==='P'){if(out&&out.slice(-1)!=='\n')out+='\n';out+=plantTexto(n);}
+      else out+=plantTexto(n);
+    }
+  });
+  return out;
+}
+var _plantR=null;
+function plantRango(){var sel=window.getSelection();if(sel&&sel.rangeCount){var r=sel.getRangeAt(0),ed=r.startContainer.nodeType===1?r.startContainer.closest('[data-plant]'):r.startContainer.parentNode.closest('[data-plant]');if(ed)_plantR={k:ed.getAttribute('data-plant'),r:r.cloneRange()};}}
+function plantGuardar(ed){var k=ed.getAttribute('data-plant');PLANT[k]=plantTexto(ed).replace(/\n$/,'');var pv=$('[data-prev="'+k+'"]');if(pv)pv.textContent=textoRec(k,ejemploTurno());guardarPronto();}
+function plantInsertar(k,v){
+  var ed=$('[data-plant="'+k+'"]');if(!ed)return;
+  ed.focus();
+  var sel=window.getSelection();
+  if(_plantR&&_plantR.k===k&&ed.contains(_plantR.r.startContainer)){sel.removeAllRanges();sel.addRange(_plantR.r);}
+  else{var r=document.createRange();r.selectNodeContents(ed);r.collapse(false);sel.removeAllRanges();sel.addRange(r);}
+  document.execCommand('insertHTML',false,chipVar(v)+'&nbsp;');
+  plantRango();plantGuardar(ed);
+}
 function textoRec(tipo,t){
   var d=D(t.fecha),f=DIAS[d.getDay()]+' '+d.getDate()+' de '+MESES[d.getMonth()];
   var txt=PLANT[tipo]||PLANT.turno||'';
@@ -826,7 +854,7 @@ function recordatoriosV(){
     return '<div class="rec" style="flex-direction:row;align-items:center;gap:14px;flex-wrap:wrap"><span class="av '+color(r.t.nombre)+'">'+ini(r.t.nombre)+'</span><div style="flex:1;min-width:200px;display:flex;flex-direction:column;gap:3px"><div class="top" style="justify-content:flex-start;gap:10px">'+esc(r.t.nombre)+'<span class="tag t-'+r.estado+'">'+r.estado+'</span></div><div class="dt">'+(r.tipo==='semana'?'Una semana antes':'El día anterior · '+REC_TIPO[r.tipo].toLowerCase())+' · sesión '+corto(r.t.fecha).toLowerCase()+' '+r.t.hora+'</div><div class="dt">'+ico('i-clock',13,1.8)+' '+(r.estado==='enviado'?'Enviado ':'Envío ')+envioTxt(r.envio).toLowerCase()+'</div></div><div style="display:flex;gap:6px">'+acc+'</div><details style="width:100%"><summary class="link" style="font-size:13.5px;cursor:pointer">Ver mensaje</summary><div class="burbuja" style="margin-top:10px">'+esc(textoRec(r.tipo,r.t))+'</div></details></div>';
   }).join('')||'<div class="note" style="padding:12px 0">No hay recordatorios '+(S.recf==='proximos'?'programados':'enviados')+'.</div>';
   var ej=ejemploTurno();
-  function plant(k){return '<details class="plant"><summary class="card-h"><h3>'+REC_TIPO[k]+'</h3><span class="note">'+({turno:'Al agendar, con el botón WhatsApp del turno',semana:'7 días antes',sesion:'Día anterior · confirmados',confirmar:'Día anterior · sin confirmar',enlace:'Día anterior · virtuales'})[k]+'</span></summary><textarea data-plant="'+k+'" aria-label="Plantilla '+REC_TIPO[k]+'">'+esc(PLANT[k])+'</textarea><div class="vars">'+['paciente','fecha','hora','profesional','enlace','calendario'].map(function(v){return '<button type="button" data-var="'+v+'" data-k="'+k+'">{'+v+'}</button>';}).join('')+'</div><div class="note">Vista previa:</div><div class="burbuja" data-prev="'+k+'">'+esc(textoRec(k,ej))+'</div></details>';}
+  function plant(k){return '<details class="plant"><summary class="card-h"><h3>'+REC_TIPO[k]+'</h3><span class="note">'+({turno:'Al agendar, con el botón WhatsApp del turno',semana:'7 días antes',sesion:'Día anterior · confirmados',confirmar:'Día anterior · sin confirmar',enlace:'Día anterior · virtuales'})[k]+'</span></summary><div class="ed" contenteditable="true" role="textbox" aria-multiline="true" data-plant="'+k+'" aria-label="Mensaje '+REC_TIPO[k]+'">'+plantHtml(PLANT[k])+'</div><div class="vars"><span class="note">Agregar:</span>'+Object.keys(VARS).map(function(v){return '<button type="button" data-var="'+v+'" data-k="'+k+'">+ '+VARS[v]+'</button>';}).join('')+'</div><div class="note">Vista previa:</div><div class="burbuja" data-prev="'+k+'">'+esc(textoRec(k,ej))+'</div></details>';}
   function tb(id,l,n){return '<button data-recf="'+id+'" aria-pressed="'+(S.recf===id)+'">'+l+'<span class="c">'+n+'</span></button>';}
   return '<header class="head"><div><h1>Recordatorios</h1><div class="sub">Cada turno se recuerda solo: una semana antes y el día anterior.</div></div></header>'+
   '<div class="recstack"><section class="card" style="gap:14px"><div class="toolbar"><div class="tabs" role="group">'+tb('proximos','Programados',prog.length)+tb('enviados','Enviados',env.length)+'</div></div>'+filas+'<div class="note">Los avisos no salen solos: cuando llega el día, tocá <b>Enviar ahora</b> y se abre WhatsApp con el mensaje listo para mandar.</div></section>'+
@@ -1133,7 +1161,7 @@ function bindInputs(){
   var q=$('#q');if(q)q.addEventListener('input',function(){S.q=q.value;var cols=$('.cols');var tmp=document.createElement('div');tmp.innerHTML=agenda();cols.replaceChild(tmp.firstElementChild,cols.firstElementChild);});
   var pq=$('#pq');if(pq)pq.addEventListener('input',function(){S.pq=pq.value;var tmp=document.createElement('div');tmp.innerHTML=pacientes();$('#ptb').innerHTML=tmp.querySelector('#ptb').innerHTML;});
   var pg=$('#pagq');if(pg)pg.addEventListener('input',function(){S.pagq=pg.value;var pos=pg.selectionStart;render();var n=$('#pagq');n.focus();n.setSelectionRange(pos,pos);});
-  $$('[data-plant]').forEach(function(ta){ta.addEventListener('input',function(){var k=ta.getAttribute('data-plant');PLANT[k]=ta.value;var ej=ejemploTurno();$('[data-prev="'+k+'"]').textContent=textoRec(k,ej);});});
+  $$('[data-plant]').forEach(function(ed){ed.addEventListener('input',function(){plantGuardar(ed);});ed.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();document.execCommand('insertLineBreak');}});ed.addEventListener('paste',function(e){e.preventDefault();var t=(e.clipboardData||window.clipboardData).getData('text');document.execCommand('insertText',false,t);});ed.addEventListener('keyup',plantRango);ed.addEventListener('mouseup',plantRango);ed.addEventListener('blur',plantRango);});
   $$('#view [data-cfgset]').forEach(function(el){
     var ev=(el.tagName==='SELECT'||el.type==='checkbox')?'change':'input';
     el.addEventListener(ev,function(){
@@ -1257,7 +1285,7 @@ document.addEventListener('click',function(e){
   if(g('[data-pmes]')){var d=D(S.pmes);d.setMonth(d.getMonth()+ +el.getAttribute('data-pmes'));S.pmes=K(d).slice(0,7);render();return;}
   if(g('[data-recf]')){S.recf=el.getAttribute('data-recf');render();return;}
   if(g('[data-rec]')){var a=el.getAttribute('data-rec'),rid=el.getAttribute('data-id');if(a==='enviar'){var R=recordatorios().filter(function(r){return r.id===rid;})[0],pp=R&&pacPorNombre(R.t.nombre);if(!pp||!pp.tel){toast('Cargá el teléfono del paciente para enviarle el mensaje');return;}window.open('https://wa.me/'+telWa(pp.tel)+'?text='+encodeURIComponent(textoRec(R.tipo,R.t)),'_blank');RECX[rid]='enviado';toast('Se abrió WhatsApp con el mensaje listo para enviar');}else if(a==='pausar'){RECX[rid]='pausado';toast('Recordatorio pausado');}else{delete RECX[rid];toast('Recordatorio reactivado');}render();return;}
-  if(g('[data-var]')){var k=el.getAttribute('data-k'),ta=$('[data-plant="'+k+'"]'),v='{'+el.getAttribute('data-var')+'}',s=ta.selectionStart||ta.value.length;ta.value=ta.value.slice(0,s)+v+ta.value.slice(ta.selectionEnd||s);ta.focus();ta.setSelectionRange(s+v.length,s+v.length);ta.dispatchEvent(new Event('input'));return;}
+  if(g('[data-var]')){plantInsertar(el.getAttribute('data-k'),el.getAttribute('data-var'));return;}
   if(g('[data-pinact]')){pinAccion(el.getAttribute('data-pinact'));return;}
   if(g('[data-cfg]')){S.cfgTab=el.getAttribute('data-cfg');if(cur()!=='configuracion')go('configuracion');else render();return;}
   if(g('[data-tema]')){CFG.tema=el.getAttribute('data-tema');guardarApariencia();render();toast('Colores: '+PALETAS[CFG.tema].n);return;}
