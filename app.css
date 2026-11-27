@@ -503,3 +503,12 @@ details.plant[open] summary h3::before{transform:rotate(90deg)}
 .vars .note{margin-right:2px}
 details.plant[open]{display:flex;flex-direction:column;gap:8px}
 body.sololectura .ed{pointer-events:none;opacity:.55}
+
+.instbody{display:flex;flex-direction:column;gap:14px;font-size:15px;line-height:1.5}
+.instbody p{margin:0}
+.pasos{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+.pasos li{display:flex;gap:12px;align-items:flex-start}
+.pasos .num{flex:none;width:28px;height:28px;border-radius:50%;background:var(--pl);color:var(--pd);font-weight:700;display:flex;align-items:center;justify-content:center;font-size:14px}
+.pasos .icn{display:inline-flex;vertical-align:-3px;color:var(--pd)}
+.instlink{background:var(--pl3);border:1px solid var(--pl2);border-radius:12px;padding:10px 12px;font-size:14px;overflow-wrap:anywhere}
+.instlogin{width:100%;justify-content:center}

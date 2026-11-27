@@ -137,10 +137,10 @@ var PLANT={
   turno:'¡Hola {paciente}! Te confirmo tu sesión del {fecha} a las {hora}.\nSi no podés venir, avisame.\n{profesional}\n\nAgendala en tu calendario:\n{calendario}',
   semana:'¡Hola {paciente}! Te recuerdo que tenés sesión el {fecha} a las {hora}.\nSi necesitás cambiar el día, avisame con tiempo.\n{profesional}\n\nAgendala en tu calendario:\n{calendario}',
   sesion:'¡Hola {paciente}! Te recuerdo tu sesión de mañana, {fecha} a las {hora}.\nSi necesitás reprogramar, avisame.\n{profesional}',
-  confirmar:'¡Hola {paciente}! ¿Me confirmás tu asistencia a la sesión del {fecha} a las {hora}? Respondé SÍ o NO.\nGracias,\n{profesional}\n\nAgendala en tu calendario:\n{calendario}',
+  confirmar:'¡Hola {paciente}! Mañana tenés sesión, {fecha} a las {hora}.\nEn este link podés confirmar si venís y agendarla en tu calendario:\n{calendario}\n{profesional}',
   enlace:'¡Hola {paciente}! Te paso el enlace para la sesión virtual del {fecha} a las {hora}:\n{enlace}\n{profesional}'
 };
-var PLANT_VIEJAS=[{"turno": "Hola {paciente}, te confirmo tu sesión del {fecha} a las {hora}. Agendala en tu calendario: {calendario} — Si no podés venir, avisame. {profesional}", "semana": "Hola {paciente}, te recuerdo que tenés sesión el {fecha} a las {hora}. Si necesitás cambiar el día, avisame con tiempo. Agendala en tu calendario: {calendario} — {profesional}", "sesion": "Hola {paciente}, te recuerdo tu sesión de mañana, {fecha} a las {hora}. Si necesitás reprogramar, avisame. {profesional}", "confirmar": "Hola {paciente}, ¿me confirmás tu asistencia a la sesión del {fecha} a las {hora}? Respondé SÍ o NO. Gracias, {profesional}", "enlace": "Hola {paciente}, te paso el enlace para la sesión virtual del {fecha} a las {hora}: {enlace} — {profesional}"},{"turno": "¡Hola {paciente}! Te confirmo tu sesión del {fecha} a las {hora}.\nSi no podés venir, avisame.\n{profesional}\n\n📅 Agendala en tu calendario:\n{calendario}", "semana": "¡Hola {paciente}! Te recuerdo que tenés sesión el {fecha} a las {hora}.\nSi necesitás cambiar el día, avisame con tiempo.\n{profesional}\n\n📅 Agendala en tu calendario:\n{calendario}", "sesion": "¡Hola {paciente}! Te recuerdo tu sesión de mañana, {fecha} a las {hora}.\nSi necesitás reprogramar, avisame.\n{profesional}", "confirmar": "¡Hola {paciente}! ¿Me confirmás tu asistencia a la sesión del {fecha} a las {hora}? Respondé SÍ o NO.\nGracias,\n{profesional}\n\n📅 Agendala en tu calendario:\n{calendario}", "enlace": "¡Hola {paciente}! Te paso el enlace para la sesión virtual del {fecha} a las {hora}:\n{enlace}\n{profesional}"}];
+var PLANT_VIEJAS=[{"turno": "Hola {paciente}, te confirmo tu sesión del {fecha} a las {hora}. Agendala en tu calendario: {calendario} — Si no podés venir, avisame. {profesional}", "semana": "Hola {paciente}, te recuerdo que tenés sesión el {fecha} a las {hora}. Si necesitás cambiar el día, avisame con tiempo. Agendala en tu calendario: {calendario} — {profesional}", "sesion": "Hola {paciente}, te recuerdo tu sesión de mañana, {fecha} a las {hora}. Si necesitás reprogramar, avisame. {profesional}", "confirmar": "Hola {paciente}, ¿me confirmás tu asistencia a la sesión del {fecha} a las {hora}? Respondé SÍ o NO. Gracias, {profesional}", "enlace": "Hola {paciente}, te paso el enlace para la sesión virtual del {fecha} a las {hora}: {enlace} — {profesional}"}, {"turno": "¡Hola {paciente}! Te confirmo tu sesión del {fecha} a las {hora}.\nSi no podés venir, avisame.\n{profesional}\n\n📅 Agendala en tu calendario:\n{calendario}", "semana": "¡Hola {paciente}! Te recuerdo que tenés sesión el {fecha} a las {hora}.\nSi necesitás cambiar el día, avisame con tiempo.\n{profesional}\n\n📅 Agendala en tu calendario:\n{calendario}", "sesion": "¡Hola {paciente}! Te recuerdo tu sesión de mañana, {fecha} a las {hora}.\nSi necesitás reprogramar, avisame.\n{profesional}", "confirmar": "¡Hola {paciente}! ¿Me confirmás tu asistencia a la sesión del {fecha} a las {hora}? Respondé SÍ o NO.\nGracias,\n{profesional}\n\n📅 Agendala en tu calendario:\n{calendario}", "enlace": "¡Hola {paciente}! Te paso el enlace para la sesión virtual del {fecha} a las {hora}:\n{enlace}\n{profesional}"}, {"confirmar": "¡Hola {paciente}! ¿Me confirmás tu asistencia a la sesión del {fecha} a las {hora}? Respondé SÍ o NO.\nGracias,\n{profesional}\n\nAgendala en tu calendario:\n{calendario}"}];
 var REC_TIPO={turno:'Confirmación del turno',semana:'Aviso una semana antes',sesion:'Recordatorio de sesión',confirmar:'Confirmar asistencia',enlace:'Enlace de videollamada'};
 var RECX={}; // cambios manuales: id → 'enviado' | 'pausado'
 function envioDe(t,dias){return add(t.fecha,-dias)+' '+CFG.horaRec;}
@@ -940,12 +940,13 @@ function authV(modo){
     '<button type="button" class="gbtn" data-glogin><svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>Continuar con Google</button>'+
     '<div class="note" id="gErr" role="alert" style="color:var(--red-d);min-height:18px"></div>'+
     '<div class="note">Tus datos quedan en tu cuenta de Google: nadie más puede verlos.</div>'+
+    instBtnHtml('btn-ghost instlogin')+
     (GCLIENT?'':'<div class="note" style="color:var(--red-d)">Falta configurar el ID de Google en config.js.</div>')+'</div>';
   return '<div class="auth-f">'+(ilu&&ilu[2]?'<img class="ilus-top" src="'+ilu[2]+'" alt="">':'')+'<div class="brand">'+logoHtml()+'<span>'+marcaHtml()+'</span></div>'+f+'</div>'+panel;
 }
 
 /* ================= OTRAS ================= */
-function mas(){return '<header class="head"><h1>Más</h1></header><div class="card" style="gap:4px">'+[['recordatorios','Recordatorios','i-bell'],['configuracion','Configuración','i-set']].map(function(n){return '<button class="nav-a" data-go="'+n[0]+'">'+ico(n[2])+n[1]+'</button>';}).join('')+'<button class="nav-a" data-actualizar>'+ico('i-refresh')+'Actualizar app</button><button class="nav-a" data-salir>'+ico('i-logout')+'Cerrar sesión</button></div>';}
+function mas(){return '<header class="head"><h1>Más</h1></header><div class="card" style="gap:4px">'+[['recordatorios','Recordatorios','i-bell'],['configuracion','Configuración','i-set']].map(function(n){return '<button class="nav-a" data-go="'+n[0]+'">'+ico(n[2])+n[1]+'</button>';}).join('')+(instalada()?'':'<button class="nav-a" data-instalar>'+ico('i-download')+'Descargar la app en el celular</button>')+'<button class="nav-a" data-actualizar>'+ico('i-refresh')+'Actualizar app</button><button class="nav-a" data-salir>'+ico('i-logout')+'Cerrar sesión</button></div>';}
 
 /* ================= SUSCRIPCIÓN (portero) =================
    Si config.js tiene AP_PORTERO_URL, la app le pregunta al portero si esta cuenta puede cargar datos.
@@ -1142,6 +1143,35 @@ function actualizarApp(){
   try{if(window.caches)p.push(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){return caches.delete(k);}));}));}catch(e){}
   Promise.all(p).catch(function(){}).then(function(){setTimeout(function(){location.replace(location.pathname+'?v='+Date.now()+location.hash);},PENDIENTE?1500:300);});
 }
+
+/* ---------- Instalar la app en el celular ---------- */
+var _instEv=null;
+window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();_instEv=e;});
+window.addEventListener('appinstalled',function(){_instEv=null;closeOv();toast('¡Listo! La app quedó instalada');if(S.logged)render();else $('#auth').innerHTML=authV('ingresar');});
+function instalada(){try{return matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;}catch(e){return false;}}
+function plataforma(){var ua=navigator.userAgent||'';var ios=/iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&'ontouchend' in document);
+  return {ios:ios,android:/Android/.test(ua),movil:ios||/Android|Mobile/.test(ua),enApp:/FBAN|FBAV|Instagram|WhatsApp|Line\//.test(ua),chromeIOS:/CriOS|FxiOS|EdgiOS/.test(ua)};}
+function instBtnHtml(cls){if(instalada())return '';var pl=plataforma();return '<button type="button" class="'+(cls||'btn-ghost')+' instbtn" data-instalar>'+ico('i-download',18,1.8)+(pl.movil?'Descargar la app en el celular':'Instalar en el celular')+'</button>';}
+function instalarApp(){
+  if(_instEv){var ev=_instEv;_instEv=null;ev.prompt();ev.userChoice.then(function(r){if(r&&r.outcome!=='accepted')_instEv=ev;}).catch(function(){});return;}
+  var pl=plataforma(),url=baseApp(),h='';
+  function paso(n,t){return '<li><span class="num">'+n+'</span><span>'+t+'</span></li>';}
+  if(pl.ios&&pl.enApp){
+    h='<p>Estás dentro de otra app (WhatsApp, Instagram…). Para instalarla hay que abrir la agenda en <b>Safari</b>:</p><ol class="pasos">'+paso(1,'Tocá los <b>···</b> o el ícono de compartir, arriba o abajo.')+paso(2,'Elegí <b>Abrir en Safari</b>.')+paso(3,'En Safari, tocá <b>Descargar la app</b> de nuevo.')+'</ol>';
+  }else if(pl.ios){
+    h='<ol class="pasos">'+paso(1,'Tocá el botón <b>Compartir</b> <span class="icn">'+ico('i-upload',16,1.8)+'</span> '+(pl.chromeIOS?'(arriba a la derecha)':'(abajo, en el medio)')+'.')+paso(2,'Bajá y elegí <b>Agregar a inicio</b>.')+paso(3,'Tocá <b>Agregar</b>. La agenda aparece en tu pantalla como una app más.')+'</ol>';
+  }else if(pl.android){
+    h='<ol class="pasos">'+paso(1,'Tocá los <b>tres puntitos ⋮</b> arriba a la derecha de Chrome.')+paso(2,'Elegí <b>Instalar app</b> o <b>Agregar a pantalla principal</b>.')+paso(3,'Confirmá con <b>Instalar</b>. La agenda aparece en tu pantalla como una app más.')+'</ol>'+(pl.enApp?'<p class="note">Si estás dentro de WhatsApp o Instagram, primero tocá ⋮ → <b>Abrir en Chrome</b>.</p>':'');
+  }else{
+    h='<p>Abrí esta dirección en el navegador del celular y tocá <b>Descargar la app en el celular</b>:</p><div class="instlink">'+esc(url)+'</div>'+
+      '<div style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="btn-ghost" data-copiarlink>Copiar link</button><a class="btn-primary" href="https://api.whatsapp.com/send?text='+encodeURIComponent('Agenda: '+url)+'" target="_blank" rel="noopener">Mandármelo por WhatsApp</a></div>';
+  }
+  $('#instBody').innerHTML=h;openOv('#ovInst');
+}
+document.addEventListener('click',function(e){
+  if(e.target.closest('[data-instalar]')){e.preventDefault();instalarApp();return;}
+  if(e.target.closest('[data-copiarlink]')){var u=baseApp();try{navigator.clipboard.writeText(u).then(function(){toast('Link copiado');});}catch(x){toast(u);}}
+});
 /* ---------- Render ---------- */
 var RUTAS={inicio:dashboard,calendario:calendario,pacientes:pacientes,pagos:pagos,recordatorios:recordatoriosV,configuracion:configuracion,mas:mas};
 function cur(){var h=(location.hash||'').slice(1);if(h==='ingresar')return h;if(/^paciente-\d+$/.test(h))return h;return RUTAS[h]?h:'inicio';}
