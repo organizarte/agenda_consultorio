@@ -512,3 +512,4 @@ body.sololectura .ed{pointer-events:none;opacity:.55}
 .pasos .icn{display:inline-flex;vertical-align:-3px;color:var(--pd)}
 .instlink{background:var(--pl3);border:1px solid var(--pl2);border-radius:12px;padding:10px 12px;font-size:14px;overflow-wrap:anywhere}
 .instlogin{width:100%;justify-content:center}
+.side .actualizar[data-instalar]{margin-bottom:-24px}

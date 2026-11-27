@@ -1151,7 +1151,7 @@ window.addEventListener('appinstalled',function(){_instEv=null;closeOv();toast('
 function instalada(){try{return matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;}catch(e){return false;}}
 function plataforma(){var ua=navigator.userAgent||'';var ios=/iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&'ontouchend' in document);
   return {ios:ios,android:/Android/.test(ua),movil:ios||/Android|Mobile/.test(ua),enApp:/FBAN|FBAV|Instagram|WhatsApp|Line\//.test(ua),chromeIOS:/CriOS|FxiOS|EdgiOS/.test(ua)};}
-function instBtnHtml(cls){if(instalada())return '';var pl=plataforma();return '<button type="button" class="'+(cls||'btn-ghost')+' instbtn" data-instalar>'+ico('i-download',18,1.8)+(pl.movil?'Descargar la app en el celular':'Instalar en el celular')+'</button>';}
+function instBtnHtml(cls){if(instalada())return '';var pl=plataforma();return '<button type="button" class="'+(cls||'btn-ghost')+' instbtn" data-instalar>'+ico('i-download',18,1.8)+(pl.movil?'Descargar la app en el celular':'Instalar la app')+'</button>';}
 function instalarApp(){
   if(_instEv){var ev=_instEv;_instEv=null;ev.prompt();ev.userChoice.then(function(r){if(r&&r.outcome!=='accepted')_instEv=ev;}).catch(function(){});return;}
   var pl=plataforma(),url=baseApp(),h='';
@@ -1163,11 +1163,17 @@ function instalarApp(){
   }else if(pl.android){
     h='<ol class="pasos">'+paso(1,'Tocá los <b>tres puntitos ⋮</b> arriba a la derecha de Chrome.')+paso(2,'Elegí <b>Instalar app</b> o <b>Agregar a pantalla principal</b>.')+paso(3,'Confirmá con <b>Instalar</b>. La agenda aparece en tu pantalla como una app más.')+'</ol>'+(pl.enApp?'<p class="note">Si estás dentro de WhatsApp o Instagram, primero tocá ⋮ → <b>Abrir en Chrome</b>.</p>':'');
   }else{
-    h='<p>Abrí esta dirección en el navegador del celular y tocá <b>Descargar la app en el celular</b>:</p><div class="instlink">'+esc(url)+'</div>'+
+    var ua=navigator.userAgent||'',safari=/Safari/.test(ua)&&!/Chrome|Chromium|Edg\//.test(ua),firefox=/Firefox/.test(ua),edge=/Edg\//.test(ua);
+    h='<b>En esta computadora</b>'+(firefox?'<p>Firefox no permite instalar apps. Abrí la agenda en <b>Google Chrome</b> o <b>Microsoft Edge</b> y tocá <b>Instalar la app</b>.</p>':
+      safari?'<ol class="pasos">'+paso(1,'Arriba, en el menú, tocá <b>Archivo</b>.')+paso(2,'Elegí <b>Agregar al Dock</b>.')+'</ol>':
+      '<ol class="pasos">'+paso(1,'Tocá el ícono de instalar <span class="icn">'+ico('i-download',16,1.8)+'</span> que aparece a la derecha de la barra de direcciones, arriba.')+paso(2,'Si no lo ves: tocá los <b>tres puntitos '+(edge?'···':'⋮')+'</b> arriba a la derecha → '+(edge?'<b>Aplicaciones → Instalar este sitio como aplicación</b>':'<b>Transmitir, guardar y compartir → Instalar página como app</b>')+'.')+paso(3,'Confirmá con <b>Instalar</b>. Queda un ícono en el escritorio y en el menú Inicio.')+'</ol>')+
+      '<b style="margin-top:6px">En el celular</b><p>Abrí esta dirección en el navegador del celular y tocá <b>Descargar la app en el celular</b>:</p><div class="instlink">'+esc(url)+'</div>'+
       '<div style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="btn-ghost" data-copiarlink>Copiar link</button><a class="btn-primary" href="https://api.whatsapp.com/send?text='+encodeURIComponent('Agenda: '+url)+'" target="_blank" rel="noopener">Mandármelo por WhatsApp</a></div>';
   }
   $('#instBody').innerHTML=h;openOv('#ovInst');
 }
+function ocultarInstalar(){if(instalada())$$('.side [data-instalar]').forEach(function(b){b.hidden=true;});}
+ocultarInstalar();window.addEventListener('appinstalled',ocultarInstalar);
 document.addEventListener('click',function(e){
   if(e.target.closest('[data-instalar]')){e.preventDefault();instalarApp();return;}
   if(e.target.closest('[data-copiarlink]')){var u=baseApp();try{navigator.clipboard.writeText(u).then(function(){toast('Link copiado');});}catch(x){toast(u);}}
