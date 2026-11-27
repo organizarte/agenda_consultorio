@@ -33,7 +33,7 @@ function plata(v){return '$ '+Math.round(v).toLocaleString('es-AR');}
 function num(v){return parseInt(String(v).replace(/\D/g,''),10)||0;}
 function edad(nac){if(!nac)return null;var a=D(HOY),b=D(nac),e=a.getFullYear()-b.getFullYear();if(a.getMonth()<b.getMonth()||(a.getMonth()===b.getMonth()&&a.getDate()<b.getDate()))e--;return e;}
 function ico(id,w,sw){return '<svg width="'+(w||20)+'" height="'+(w||20)+'" fill="none" stroke="currentColor" stroke-width="'+(sw||1.7)+'" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#'+id+'"/></svg>';}
-function toast(m){var t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(function(){t.classList.remove('show');},2600);}
+function toast(m,ms){var t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(function(){t.classList.remove('show');},ms||2600);}
 function store(k,v){try{if(v===undefined){var x=localStorage.getItem(k);return x?JSON.parse(x):null;}localStorage.setItem(k,JSON.stringify(v));}catch(e){return null;}}
 
 /* ---------- Paletas y logos ---------- */
@@ -134,13 +134,13 @@ function T(fecha,hora,nombre,mod,estado,pagado,extra){
 
 /* ---------- Recordatorios ---------- */
 var PLANT={
-  turno:'¡Hola {paciente}! Te confirmo tu sesión del {fecha} a las {hora}.\nSi no podés venir, avisame.\n{profesional}\n\n📅 Agendala en tu calendario:\n{calendario}',
-  semana:'¡Hola {paciente}! Te recuerdo que tenés sesión el {fecha} a las {hora}.\nSi necesitás cambiar el día, avisame con tiempo.\n{profesional}\n\n📅 Agendala en tu calendario:\n{calendario}',
+  turno:'¡Hola {paciente}! Te confirmo tu sesión del {fecha} a las {hora}.\nSi no podés venir, avisame.\n{profesional}\n\nAgendala en tu calendario:\n{calendario}',
+  semana:'¡Hola {paciente}! Te recuerdo que tenés sesión el {fecha} a las {hora}.\nSi necesitás cambiar el día, avisame con tiempo.\n{profesional}\n\nAgendala en tu calendario:\n{calendario}',
   sesion:'¡Hola {paciente}! Te recuerdo tu sesión de mañana, {fecha} a las {hora}.\nSi necesitás reprogramar, avisame.\n{profesional}',
-  confirmar:'¡Hola {paciente}! ¿Me confirmás tu asistencia a la sesión del {fecha} a las {hora}? Respondé SÍ o NO.\nGracias,\n{profesional}\n\n📅 Agendala en tu calendario:\n{calendario}',
+  confirmar:'¡Hola {paciente}! ¿Me confirmás tu asistencia a la sesión del {fecha} a las {hora}? Respondé SÍ o NO.\nGracias,\n{profesional}\n\nAgendala en tu calendario:\n{calendario}',
   enlace:'¡Hola {paciente}! Te paso el enlace para la sesión virtual del {fecha} a las {hora}:\n{enlace}\n{profesional}'
 };
-var PLANT_VIEJAS={"turno": "Hola {paciente}, te confirmo tu sesión del {fecha} a las {hora}. Agendala en tu calendario: {calendario} — Si no podés venir, avisame. {profesional}", "semana": "Hola {paciente}, te recuerdo que tenés sesión el {fecha} a las {hora}. Si necesitás cambiar el día, avisame con tiempo. Agendala en tu calendario: {calendario} — {profesional}", "sesion": "Hola {paciente}, te recuerdo tu sesión de mañana, {fecha} a las {hora}. Si necesitás reprogramar, avisame. {profesional}", "confirmar": "Hola {paciente}, ¿me confirmás tu asistencia a la sesión del {fecha} a las {hora}? Respondé SÍ o NO. Gracias, {profesional}", "enlace": "Hola {paciente}, te paso el enlace para la sesión virtual del {fecha} a las {hora}: {enlace} — {profesional}"};
+var PLANT_VIEJAS=[{"turno": "Hola {paciente}, te confirmo tu sesión del {fecha} a las {hora}. Agendala en tu calendario: {calendario} — Si no podés venir, avisame. {profesional}", "semana": "Hola {paciente}, te recuerdo que tenés sesión el {fecha} a las {hora}. Si necesitás cambiar el día, avisame con tiempo. Agendala en tu calendario: {calendario} — {profesional}", "sesion": "Hola {paciente}, te recuerdo tu sesión de mañana, {fecha} a las {hora}. Si necesitás reprogramar, avisame. {profesional}", "confirmar": "Hola {paciente}, ¿me confirmás tu asistencia a la sesión del {fecha} a las {hora}? Respondé SÍ o NO. Gracias, {profesional}", "enlace": "Hola {paciente}, te paso el enlace para la sesión virtual del {fecha} a las {hora}: {enlace} — {profesional}"},{"turno": "¡Hola {paciente}! Te confirmo tu sesión del {fecha} a las {hora}.\nSi no podés venir, avisame.\n{profesional}\n\n📅 Agendala en tu calendario:\n{calendario}", "semana": "¡Hola {paciente}! Te recuerdo que tenés sesión el {fecha} a las {hora}.\nSi necesitás cambiar el día, avisame con tiempo.\n{profesional}\n\n📅 Agendala en tu calendario:\n{calendario}", "sesion": "¡Hola {paciente}! Te recuerdo tu sesión de mañana, {fecha} a las {hora}.\nSi necesitás reprogramar, avisame.\n{profesional}", "confirmar": "¡Hola {paciente}! ¿Me confirmás tu asistencia a la sesión del {fecha} a las {hora}? Respondé SÍ o NO.\nGracias,\n{profesional}\n\n📅 Agendala en tu calendario:\n{calendario}", "enlace": "¡Hola {paciente}! Te paso el enlace para la sesión virtual del {fecha} a las {hora}:\n{enlace}\n{profesional}"}];
 var REC_TIPO={turno:'Confirmación del turno',semana:'Aviso una semana antes',sesion:'Recordatorio de sesión',confirmar:'Confirmar asistencia',enlace:'Enlace de videollamada'};
 var RECX={}; // cambios manuales: id → 'enviado' | 'pausado'
 function envioDe(t,dias){return add(t.fecha,-dias)+' '+CFG.horaRec;}
@@ -161,9 +161,10 @@ function recordatorios(){
 function ejemploTurno(){return TURNOS.filter(function(t){return t.fecha>HOY;})[0]||{nombre:'Ana Pérez',fecha:add(HOY,7),hora:'10:00',mod:'p'};}
 function b64url(o){var b=btoa(unescape(encodeURIComponent(JSON.stringify(o))));return b.replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
 function baseApp(){return location.origin+location.pathname.replace(/[^\/]*$/,'');}
+function codAzar(n){var a=new Uint8Array(n),c='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789',o='';try{crypto.getRandomValues(a);}catch(e){for(var i=0;i<n;i++)a[i]=Math.random()*256|0;}for(var j=0;j<n;j++)o+=c[a[j]%c.length];return o;}
 function linkCalendario(t){
   var lugar=t.mod==='v'?(CFG.enlace||''):(CFG.dir||'');
-  var o={f:t.fecha,h:t.hora,m:t.mod,k:CFG.tema||'salvia',i:letra()};if(durMin(t)!==50)o.d=durMin(t);if(lugar)o.l=lugar;if(CFG.prof)o.p=CFG.prof;if(CFG.marca&&CFG.marca!=='Agenda Psicológica')o.c=CFG.marca;var c=[o.f.replace(/-/g,'').slice(2),o.h.replace(':',''),o.m||'',o.k==='salvia'?'':o.k,o.i||'',o.d||'',o.l||'',o.p||'',o.c||''].map(function(x){return String(x).replace(/\|/g,'/');}).join('|').replace(/\|+$/,'');var b=btoa(unescape(encodeURIComponent(c))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');return baseApp()+'turno.html#2'+b;
+  var o={f:t.fecha,h:t.hora,m:t.mod,k:CFG.tema||'salvia',i:letra()};if(CFG.tel)o.w=telWa(CFG.tel);if(durMin(t)!==50)o.d=durMin(t);if(lugar)o.l=lugar;if(CFG.prof)o.p=CFG.prof;if(CFG.marca&&CFG.marca!=='Agenda Psicológica')o.c=CFG.marca;var c=[o.f.replace(/-/g,'').slice(2),o.h.replace(':',''),o.m||'',o.k==='salvia'?'':o.k,o.i||'',o.d||'',o.l||'',o.p||'',o.c||'',o.w||''].map(function(x){return String(x).replace(/\|/g,'/');}).join('|').replace(/\|+$/,'');var b=btoa(unescape(encodeURIComponent(c))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');return baseApp()+'turno.html#2'+b;
 }
 var VARS={paciente:'Nombre del paciente',fecha:'Fecha',hora:'Hora',profesional:'Tu nombre',enlace:'Enlace de videollamada',calendario:'Link al calendario'};
 function chipVar(v){return '<span class="var" contenteditable="false" data-v="'+v+'">'+esc(VARS[v]||v)+'</span>';}
@@ -351,7 +352,7 @@ function aplicarDatos(d,version,local){
   TURNOS.length=0;(d.turnos||[]).forEach(function(t){TURNOS.push(t);});
   if(d.cfg)for(var k in d.cfg)CFG[k]=d.cfg[k];
   if(!CFG.copiaDrive||!CFG.copiaDrive.hojas)CFG.copiaDrive={activo:false,frec:'mensual',hojas:{pac:true,tur:true,pag:true,res:true},tema:'',ultima:''};
-  if(d.plant)for(var k2 in d.plant){if(PLANT_VIEJAS[k2]&&d.plant[k2]===PLANT_VIEJAS[k2])continue;PLANT[k2]=d.plant[k2];}
+  if(d.plant)for(var k2 in d.plant){if(PLANT_VIEJAS.some(function(o){return o[k2]===d.plant[k2];}))continue;PLANT[k2]=d.plant[k2];}
   for(var k3 in RECX)delete RECX[k3];if(d.recx)for(var k4 in d.recx)RECX[k4]=d.recx[k4];
   if(version!=null)VERSION=version;
   ULTIMO=JSON.stringify(estadoDatos());
@@ -1015,6 +1016,7 @@ function susPagar(f){
   }).catch(function(){btn.disabled=false;err.textContent='No se pudo conectar. Revisá internet y probá de nuevo.';});
 }
 document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'&&S.logged)verificarSus(false);});
+
 // Lo que no se puede hacer en modo "solo ver"
 var BLOQ_SOLO='[data-npac],[data-epac],[data-nuevo],[data-slot],[data-pagar],[data-wturno],[data-rec],[data-accion],[data-lugar],[data-tema],[data-logo],[data-ilus],[data-quitarlogo],[data-xatema],[data-xlpal],[data-var],[data-dia-at],[data-copiaya],[data-ea],[data-eah]';
 function avisoSolo(){toast('Para cargar datos o enviar mensajes, activá tu suscripción.');susUI();}
@@ -1223,7 +1225,7 @@ function abrirTurno(id){
   $('#tDet').textContent=t.nombre;
   $('#detBody').innerHTML='<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span class="av '+color(t.nombre)+'">'+ini(t.nombre)+'</span><span class="tag t-'+t.estado+'">'+t.estado+'</span>'+(p?'<button class="link" data-pac="'+p.id+'" style="margin-left:auto;font-size:14px">Ver ficha'+ico('i-arrow',15,1.8)+'</button>':'')+'</div>'+
   '<div class="r"><span>Día</span><span>'+largo(t.fecha)+'</span></div><div class="r"><span>Hora</span><span>'+t.hora+' a '+hhmm(mins(t.hora)+durMin(t))+'</span></div><div class="r"><span>Modalidad</span><span>'+(t.mod==='v'?'Virtual':'Presencial')+'</span></div>'+
-  '<div class="r"><span>Pago</span><span>'+(t.pagado===null?'Sin cargo':t.pagado===true?'Pagado · '+plata(t.monto)+' · '+esc(t.medio||''):plata(t.monto)+(t.fecha<=HOY?' · a cobrar':''))+'</span></div>'+(t.nota?'<div class="r"><span>Nota</span><span>'+esc(t.nota)+'</span></div>':'');
+  '<div class="r"><span>Pago</span><span>'+(t.pagado===null?'Sin cargo':t.pagado===true?'Pagado · '+plata(t.monto)+' · '+esc(t.medio||''):plata(t.monto)+(t.fecha<=HOY?' · a cobrar':''))+'</span></div>'+(t.nota?'<div class="r"><span>Nota</span><span>'+esc(t.nota)+'</span></div>':'')+(t.confPac?'<div class="r"><span>Respuesta</span><span>'+(t.confPac==='si'?'El paciente confirmó desde el link':'El paciente avisó que no puede ir')+'</span></div>':'');
   var a='';
   if(t.estado==='pendiente')a+='<button class="btn-ghost" data-accion="confirmar" data-k="'+t.id+'">'+ico('i-check',16,2)+'Confirmar</button>';
   if(t.pagado===false&&t.estado!=='cancelada')a+='<button class="btn-ghost" data-pagar="'+t.id+'">Registrar pago</button>';
@@ -1284,7 +1286,7 @@ document.addEventListener('click',function(e){
   if(g('[data-pagf]')){S.pagf=el.getAttribute('data-pagf');render();return;}
   if(g('[data-pmes]')){var d=D(S.pmes);d.setMonth(d.getMonth()+ +el.getAttribute('data-pmes'));S.pmes=K(d).slice(0,7);render();return;}
   if(g('[data-recf]')){S.recf=el.getAttribute('data-recf');render();return;}
-  if(g('[data-rec]')){var a=el.getAttribute('data-rec'),rid=el.getAttribute('data-id');if(a==='enviar'){var R=recordatorios().filter(function(r){return r.id===rid;})[0],pp=R&&pacPorNombre(R.t.nombre);if(!pp||!pp.tel){toast('Cargá el teléfono del paciente para enviarle el mensaje');return;}window.open('https://wa.me/'+telWa(pp.tel)+'?text='+encodeURIComponent(textoRec(R.tipo,R.t)),'_blank');RECX[rid]='enviado';toast('Se abrió WhatsApp con el mensaje listo para enviar');}else if(a==='pausar'){RECX[rid]='pausado';toast('Recordatorio pausado');}else{delete RECX[rid];toast('Recordatorio reactivado');}render();return;}
+  if(g('[data-rec]')){var a=el.getAttribute('data-rec'),rid=el.getAttribute('data-id');if(a==='enviar'){var R=recordatorios().filter(function(r){return r.id===rid;})[0],pp=R&&pacPorNombre(R.t.nombre);if(!pp||!pp.tel){toast('Cargá el teléfono del paciente para enviarle el mensaje');return;}window.open('https://api.whatsapp.com/send?phone='+telWa(pp.tel)+'&text='+encodeURIComponent(textoRec(R.tipo,R.t)),'_blank');RECX[rid]='enviado';toast('Se abrió WhatsApp con el mensaje listo para enviar');}else if(a==='pausar'){RECX[rid]='pausado';toast('Recordatorio pausado');}else{delete RECX[rid];toast('Recordatorio reactivado');}render();return;}
   if(g('[data-var]')){plantInsertar(el.getAttribute('data-k'),el.getAttribute('data-var'));return;}
   if(g('[data-pinact]')){pinAccion(el.getAttribute('data-pinact'));return;}
   if(g('[data-cfg]')){S.cfgTab=el.getAttribute('data-cfg');if(cur()!=='configuracion')go('configuracion');else render();return;}
@@ -1300,7 +1302,7 @@ document.addEventListener('click',function(e){
   if(g('[data-excel]')){abrirExcel(el.getAttribute('data-excel'));return;}
   if(g('[data-xlpal]')){$$('[data-xlpal]').forEach(function(b){b.setAttribute('aria-pressed',b===el);});return;}
   if(g('#bExcel')){descargarExcel();return;}
-  if(g('[data-wturno]')){var tw=byId(el.getAttribute('data-wturno')),pw=pacPorNombre(tw.nombre);if(!pw||!pw.tel){toast('Cargá el teléfono del paciente para mandarle el turno');return;}window.open('https://wa.me/'+telWa(pw.tel)+'?text='+encodeURIComponent(textoRec('turno',tw)),'_blank');toast('Se abrió WhatsApp con el turno y el link al calendario');return;}
+  if(g('[data-wturno]')){var tw=byId(el.getAttribute('data-wturno')),pw=pacPorNombre(tw.nombre);if(!pw||!pw.tel){toast('Cargá el teléfono del paciente para mandarle el turno');return;}window.open('https://api.whatsapp.com/send?phone='+telWa(pw.tel)+'&text='+encodeURIComponent(textoRec('turno',tw)),'_blank');toast('Se abrió WhatsApp con el turno y el link al calendario');return;}
   if(g('[data-xatema]')){CFG.copiaDrive.tema=el.getAttribute('data-xatema');render();toast('Colores de las copias: '+PALETAS[CFG.copiaDrive.tema].n);return;}
   if(g('[data-copiaya]')){guardarCopiaAhora(el);return;}
   if(g('[data-actualizar]')){actualizarApp();return;}
