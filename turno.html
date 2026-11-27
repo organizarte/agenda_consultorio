@@ -95,6 +95,12 @@ a.link{color:var(--pd)}
     '&details='+encodeURIComponent(detalle)+
     (lugar?'&location='+encodeURIComponent(virtual?urlLugar:lugar):'')+
     '&ctz=America/Argentina/Buenos_Aires';
+  function ms(d){return Date.UTC(d.getFullYear(),d.getMonth(),d.getDate(),d.getHours()+3,d.getMinutes());}
+  function iv(s){return encodeURIComponent(String(s)).replace(/;/g,'%3B');}
+  // Android: abre la pantalla "nuevo evento" de la app de calendario del celular (si falla, Google Calendar web)
+  var andCal='intent:#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.item/event;'+
+    'S.title='+iv(titulo)+';S.description='+iv(detalle)+(lugar?';S.eventLocation='+iv(virtual?urlLugar:lugar):'')+
+    ';l.beginTime='+ms(ini)+';l.endTime='+ms(fin)+';S.browser_fallback_url='+encodeURIComponent(gcal)+';end';
   function icsTxt(t){return String(t).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');}
   var ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Agenda Psicologica//Turno//ES','CALSCALE:GREGORIAN','METHOD:PUBLISH','BEGIN:VEVENT',
     'UID:'+T.f.replace(/-/g,'')+T.h.replace(':','')+'-'+Math.random().toString(36).slice(2)+'@agenda',
@@ -107,6 +113,7 @@ a.link{color:var(--pd)}
   var icsUrl='data:text/calendar;charset=utf-8,'+encodeURIComponent(ics);
   var ua=navigator.userAgent||'',ios=/iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&'ontouchend' in document);
   var enApp=/FBAN|FBAV|Instagram|WhatsApp|Line\//.test(ua);
+  var android=/Android/.test(ua);
 
   var ico={
     cal:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
@@ -131,12 +138,14 @@ a.link{color:var(--pd)}
     (pasado?'<div class="note">Este turno ya pasó.</div>':
     '<div class="acciones">'+
       (ios?
-        '<a class="btn pri" href="'+icsUrl+'" download="turno.ics">'+ico.apple+'Agregar al calendario del iPhone</a><a class="btn sec" href="'+gcal+'" target="_blank" rel="noopener">'+ico.cal+'Agregar a Google Calendar</a>':
-        '<a class="btn pri" href="'+gcal+'" target="_blank" rel="noopener">'+ico.g+'Agregar a Google Calendar</a><a class="btn sec" href="'+icsUrl+'" download="turno.ics">'+ico.apple+'Agregar al calendario del iPhone</a>')+
+        '<a class="btn pri" href="'+icsUrl+'" download="turno.ics">'+ico.apple+'Agregar a mi calendario</a><a class="btn sec" href="'+gcal+'" target="_blank" rel="noopener">'+ico.cal+'Agregar a Google Calendar</a>':
+       android?
+        '<a class="btn pri" href="'+andCal+'">'+ico.cal+'Agregar a mi calendario</a><a class="btn sec" href="'+gcal+'" target="_blank" rel="noopener">'+ico.g.replace('#fff','#4285F4')+'Abrir en Google Calendar web</a>':
+        '<a class="btn pri" href="'+gcal+'" target="_blank" rel="noopener">'+ico.g+'Agregar a Google Calendar</a><a class="btn sec" href="'+icsUrl+'" download="turno.ics">'+ico.cal+'Outlook, iPhone o calendario de la compu</a>')+
       (virtual&&urlLugar?'<a class="btn sec" href="'+esc(urlLugar)+'" target="_blank" rel="noopener">'+ico.vid+'Abrir la videollamada</a>':'')+
     '</div>'+
     (puedeResp?'<div class="card resp" id="resp"></div>':'')+
-    '<div class="note">Incluye un aviso 1 hora antes.'+(puedeResp?'':'<br>Si no podés asistir, avisale a tu psicóloga.')+'</div>'+
+    (android&&puedeResp?'':'<div class="note">'+(android?'':'Incluye un aviso 1 hora antes.')+(puedeResp?'':(android?'':'<br>')+'Si no podés asistir, avisale a tu psicóloga.')+'</div>')+
     (ios&&enApp?'<div class="note">Si al tocar no pasa nada, abrí este link en Safari: tocá ··· arriba y “Abrir en Safari”.</div>':''));
   if(puedeResp)document.getElementById('resp').innerHTML='<b class="rt">¿Vas a venir?</b><div class="note" style="text-align:left">Se abre WhatsApp con el mensaje listo para mandarle a tu psicóloga.</div><div class="dos">'+
     '<a class="btn pri" href="'+waLink('Hola! Confirmo mi asistencia a la sesión del '+cuando+'.')+'" target="_blank" rel="noopener">Confirmo mi asistencia</a>'+
