@@ -1,6 +1,6 @@
 // Guarda la app en el dispositivo para que abra rápido y sin señal.
 // Los datos NO se guardan acá: viven en la planilla de Google.
-const CACHE = 'agenda-v3';
+const CACHE = 'agenda-v5';
 const ARCHIVOS = ['./', 'index.html', 'app.css', 'app.js', 'config.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'turno.html'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ARCHIVOS)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });

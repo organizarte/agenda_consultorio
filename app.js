@@ -210,7 +210,11 @@ function pedirToken(prompt){
   if(!(window.google&&google.accounts&&google.accounts.oauth2))return Promise.reject({error:'gsi'});
   if(!_tc)_tc=google.accounts.oauth2.initTokenClient({client_id:GCLIENT,scope:SCOPES,
     callback:function(r){var cb=_tcCb;_tcCb=null;if(cb)cb(r);},
-    error_callback:function(err){var cb=_tcCb;_tcCb=null;if(cb)cb({error:(err&&err.type)||'cancelado'});}});
+    error_callback:function(err){
+      var tipo=(err&&err.type)||'cancelado';
+      // A veces Google avisa "ventana cerrada" antes de mandar el permiso: esperamos un poco antes de dar por cancelado.
+      if(tipo==='popup_closed'){var cbP=_tcCb;setTimeout(function(){if(_tcCb===cbP&&cbP){_tcCb=null;cbP({error:tipo});}},4000);return;}
+      var cb=_tcCb;_tcCb=null;if(cb)cb({error:tipo});}});
   return new Promise(function(ok,mal){
     _tcCb=function(r){
       if(!r||r.error){mal(r||{error:'cancelado'});return;}
@@ -252,8 +256,10 @@ function ingresarGoogle(btn){
     return iniciarPlanilla();
   }).catch(function(err){
     var m=err&&err.error==='permiso'?'Para usar la agenda tenés que permitir que guarde su planilla en tu Drive. Probá de nuevo y marcá esa opción.':
-      err&&(err.error==='popup_closed'||err.error==='cancelado'||err.error==='popup_failed_to_open')?'No se completó el ingreso con Google. Probá de nuevo.':
-      err&&err.error==='gsi'?'No se pudo cargar Google. Revisá la conexión.':'No se pudo ingresar. Revisá la conexión y probá de nuevo.';
+      err&&err.error==='popup_failed_to_open'?'El navegador bloqueó la ventana de Google. Permití las ventanas emergentes para esta página y probá de nuevo.':
+      err&&err.error==='access_denied'?'No se dieron los permisos. Probá de nuevo y tocá Continuar en las pantallas de Google.':
+      err&&(err.error==='popup_closed'||err.error==='cancelado')?'Se cerró la ventana de Google antes de terminar. Probá de nuevo.':
+      err&&err.error==='gsi'?'No se pudo cargar Google. Revisá la conexión.':'No se pudo ingresar ('+esc(String((err&&(err.error||err.status))||'error'))+'). Probá de nuevo.';
     if(e)e.textContent=m;
   });
 }
@@ -835,7 +841,7 @@ function recordatoriosV(){
 /* ================= CONFIGURACIÓN ================= */
 function campo(l,k,tipo,extra){return '<label class="f'+(extra&&extra.full?' full':'')+'">'+l+'<input data-cfgset="'+k+'" type="'+(tipo||'text')+'" value="'+esc(CFG[k])+'"'+(extra&&extra.ph?' placeholder="'+extra.ph+'"':'')+'>'+(extra&&extra.hint?'<span class="hint">'+extra.hint+'</span>':'')+'</label>';}
 function configuracion(){
-  var tabs=[['consultorio','Consultorio','i-user-plus'],['horarios','Horarios','i-clock'],['sesiones','Sesiones y honorarios','i-wallet'],['apariencia','Apariencia','i-palette'],['excel','Planilla y copias','i-download']];
+  var tabs=[['consultorio','Consultorio','i-user-plus'],['horarios','Horarios','i-clock'],['sesiones','Sesiones y honorarios','i-wallet'],['apariencia','Apariencia','i-palette'],['excel','Planilla y copias','i-download'],['seguridad','Seguridad','i-lock']];
   var nav='<nav class="cfg-nav" aria-label="Secciones">'+tabs.map(function(t){return '<button class="nav-a" data-cfg="'+t[0]+'"'+(S.cfgTab===t[0]?' aria-current="page"':'')+'>'+ico(t[2],18)+t[1]+'</button>';}).join('')+'</nav>';
   var body='';
   if(S.cfgTab==='consultorio'){
@@ -859,6 +865,19 @@ function configuracion(){
     '<div class="f">Qué incluir<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:4px">'+xh('pac','Pacientes')+xh('tur','Turnos')+xh('pag','Pagos')+xh('res','Resumen por mes')+'</div></div>'+
     '<div class="f">Colores del Excel<div class="paletas xl" style="margin-top:6px">'+Object.keys(PALETAS).map(function(k){var t=PALETAS[k];return '<button type="button" class="paleta" data-xatema="'+k+'" aria-pressed="'+(xt===k)+'"><span class="sw4"><i style="background:'+t.p+'"></i><i style="background:'+t.pl+'"></i><i style="background:'+t.a+'"></i></span><b>'+t.n+'</b></button>';}).join('')+'</div></div>'+
     '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><button type="button" class="btn-ghost" data-copiaya>'+ico('i-download',16,1.8)+'Guardar una copia ahora</button><span class="note">Del mes en curso.</span></div></section>';
+  }else if(S.cfgTab==='seguridad'){
+    var pd=pinDatos();
+    body='<section class="card"><div><h2>PIN de bloqueo</h2><div class="note" style="margin-top:4px">Pide un PIN de 4 números para abrir la agenda, así nadie que agarre tu celular o tu computadora puede ver a tus pacientes. El PIN es de este dispositivo: en cada celular o computadora lo creás por separado. Si te lo olvidás, entrás con tu cuenta de Google y lo creás de nuevo.</div></div>'+
+    (pd?'<label class="sw" style="pointer-events:none"><span class="txt">PIN activado<span>En este dispositivo</span></span>'+ico('i-check',20,2.2)+'</label>'+
+      '<label class="f">Bloquear la agenda<select data-pinmin>'+[[0,'Apenas salgo de la app'],[1,'Después de 1 minuto sin usarla'],[5,'Después de 5 minutos sin usarla'],[15,'Después de 15 minutos sin usarla']].map(function(o){return '<option value="'+o[0]+'"'+(pd.min===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select></label>'+
+      '<div style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="btn-ghost" data-pinact="bloquear">'+ico('i-lock',16,1.8)+'Bloquear ahora</button><button type="button" class="btn-ghost" data-pinact="cambiar">Cambiar PIN</button><button type="button" class="btn-ghost" data-pinact="quitar">Quitar PIN</button></div>'
+     :'<div><button type="button" class="btn-primary" data-pinact="crear">'+ico('i-lock',18,1.8)+'Crear PIN</button></div>')+'</section>'+
+    '<section class="card"><h2>Más cuidados</h2><ul class="tips">'+
+      '<li><b>Activá la verificación en dos pasos de tu Gmail.</b> Es la llave de tu planilla. Se activa en <a href="https://myaccount.google.com/security" target="_blank" rel="noopener">myaccount.google.com/security</a>.</li>'+
+      '<li><b>Poné bloqueo de pantalla en el celular.</b></li>'+
+      '<li><b>En una computadora compartida, tocá Salir al terminar.</b> Se borra la copia guardada en ese equipo.</li>'+
+      '<li><b>No compartas tu planilla de Drive.</b> Quien la reciba ve todos los datos.</li>'+
+      '<li><b>No pongas datos clínicos en los mensajes de WhatsApp.</b></li></ul></section>';
   }else if(S.cfgTab==='sesiones'){
     body='<section class="card"><h2>Sesiones y honorarios</h2><div class="fgrid"><label class="f">Duración predeterminada<select data-cfgset="dur">'+['30 min','45 min','50 min','60 min','90 min'].map(function(o){return '<option'+(CFG.dur===o?' selected':'')+'>'+o+'</option>';}).join('')+'</select></label><label class="f">Honorario predeterminado<input data-cfgset="honor" inputmode="numeric" value="'+CFG.honor.toLocaleString('es-AR')+'"></label></div>'+
     '<div><label class="sw"><span class="txt">Sesiones presenciales<span>'+esc(CFG.dir)+'</span></span><input type="checkbox" data-cfgset="presencial"'+(CFG.presencial?' checked':'')+'></label><label class="sw"><span class="txt">Sesiones virtuales<span>Con el enlace de videollamada del consultorio</span></span><input type="checkbox" data-cfgset="virtual"'+(CFG.virtual?' checked':'')+'></label></div>'+
@@ -896,6 +915,108 @@ function authV(modo){
 
 /* ================= OTRAS ================= */
 function mas(){return '<header class="head"><h1>Más</h1></header><div class="card" style="gap:4px">'+[['recordatorios','Recordatorios','i-bell'],['configuracion','Configuración','i-set']].map(function(n){return '<button class="nav-a" data-go="'+n[0]+'">'+ico(n[2])+n[1]+'</button>';}).join('')+'<button class="nav-a" data-salir>'+ico('i-logout')+'Cerrar sesión</button></div>';}
+
+/* ================= PIN DE BLOQUEO =================
+   El PIN es de cada dispositivo: se guarda (como huella, no el número) en este navegador. */
+var PINUI=null,BLOQ=false,OCULTO=0,ULT_ACT=Date.now();
+function pinDatos(){return USER?store(claveU('pin')):null;}
+function pinSal(){var a=new Uint8Array(12);try{crypto.getRandomValues(a);}catch(e){for(var i=0;i<12;i++)a[i]=Math.random()*256|0;}return Array.prototype.map.call(a,function(x){return ('0'+x.toString(16)).slice(-2);}).join('');}
+function pinHash(pin,salt){
+  var txt=salt+':'+pin;
+  if(window.crypto&&crypto.subtle&&window.TextEncoder)return crypto.subtle.digest('SHA-256',new TextEncoder().encode(txt)).then(function(b){return Array.prototype.map.call(new Uint8Array(b),function(x){return ('0'+x.toString(16)).slice(-2);}).join('');});
+  var h=5381;for(var i=0;i<txt.length;i++)h=((h*33)^txt.charCodeAt(i))>>>0;return Promise.resolve('d'+h.toString(16));
+}
+function pinAbrir(o){PINUI=o;o.v='';var L=$('#lock');L.hidden=false;document.body.classList.add('locked');pinDibujar();}
+function pinCerrar(){PINUI=null;var L=$('#lock');L.hidden=true;L.innerHTML='';document.body.classList.remove('locked');}
+function pinDibujar(err){
+  var o=PINUI;if(!o)return;
+  var dots='';for(var i=0;i<4;i++)dots+='<i'+(i<o.v.length?' class="on"':'')+'></i>';
+  var k='';for(var n=1;n<=9;n++)k+='<button type="button" data-pk="'+n+'">'+n+'</button>';
+  var izq=o.cancelar?'<button type="button" class="lk-txt" data-pkc>Cancelar</button>':(o.olvido?'<button type="button" class="lk-txt" data-pko>Olvidé mi PIN</button>':'<span></span>');
+  $('#lock').innerHTML='<div class="lock-in"><div class="brand">'+logoHtml()+'<span>'+marcaHtml()+'</span></div>'+
+    '<h2>'+esc(o.t)+'</h2><p class="lk-s">'+(o.s||'&nbsp;')+'</p><div class="lk-dots'+(err?' mal':'')+'">'+dots+'</div><p class="lk-e" role="alert">'+(err||'')+'</p>'+
+    '<div class="lk-pad">'+k+izq+'<button type="button" data-pk="0">0</button><button type="button" class="lk-txt" data-pkb>Borrar</button></div></div>';
+}
+function pinTecla(n){
+  var o=PINUI;if(!o||o.ocupado||o.v.length>=4)return;
+  o.v+=n;pinDibujar();
+  if(o.v.length===4){var v=o.v;o.ocupado=true;setTimeout(function(){if(PINUI!==o)return;o.ocupado=false;o.v='';o.cb(v);},150);}
+}
+function pinBorrar(){var o=PINUI;if(!o||o.ocupado)return;o.v=o.v.slice(0,-1);pinDibujar();}
+function bloquear(){
+  var d=pinDatos();if(!d||!S.logged||BLOQ)return;
+  BLOQ=true;closeOv();
+  pinAbrir({t:'Ingresá tu PIN',s:esc(USER.email),olvido:true,cb:function(v){
+    var d2=pinDatos();if(!d2){desbloquear();return;}
+    pinHash(v,d2.salt).then(function(h){
+      if(h===d2.hash){d2.mal=0;store(claveU('pin'),d2);desbloquear();return;}
+      d2.mal=(d2.mal||0)+1;store(claveU('pin'),d2);pinFallos(d2);
+    });
+  }});
+  pinFallos(d,true);
+}
+function pinFallos(d,silencio){
+  if((d.mal||0)>=5){PINUI.ocupado=true;pinDibujar('Demasiados intentos. Tocá “Olvidé mi PIN” para entrar con tu cuenta de Google.');}
+  else if(!silencio)pinDibujar('PIN incorrecto'+(d.mal>=3?' · te quedan '+(5-d.mal)+' intentos':''));
+}
+function desbloquear(){BLOQ=false;ULT_ACT=Date.now();pinCerrar();}
+function pinOlvido(){
+  var mail=USER&&USER.email;if(!PINUI)return;
+  PINUI.ocupado=true;pinDibujar('Abriendo Google…');
+  cargarGSI().then(function(){return pedirToken('select_account');}).then(function(){
+    return gfetch('https://www.googleapis.com/oauth2/v3/userinfo');
+  }).then(function(u){
+    if(String(u.email||'').toLowerCase()!==mail){TOK=null;store('ap_tok',null);pinDibujar('Esa no es la cuenta de esta agenda. Elegí '+esc(mail)+'.');return;}
+    store(claveU('pin'),null);desbloquear();mostrarReconectar(false);
+    toast('Se borró el PIN. Podés crear uno nuevo en Configuración › Seguridad');
+    if(PENDIENTE)enviar();else cargar();
+  }).catch(function(){pinDibujar('No se pudo verificar con Google. Probá de nuevo.');});
+}
+function pinCrear(err){
+  pinAbrir({t:'Elegí un PIN de 4 números',s:'Lo vas a pedir para abrir la agenda en este dispositivo.',cancelar:true,cb:function(v1){
+    pinAbrir({t:'Repetí el PIN',s:'Para confirmar.',cancelar:true,cb:function(v2){
+      if(v1!==v2){pinCrear('Los PIN no coinciden. Probá de nuevo.');return;}
+      var salt=pinSal();
+      pinHash(v1,salt).then(function(h){var ant=pinDatos();store(claveU('pin'),{salt:salt,hash:h,min:ant&&ant.min!=null?ant.min:5,mal:0});pinCerrar();render();toast('PIN activado');});
+    }});
+  }});
+  if(err)pinDibujar(err);
+}
+function pinVerificar(t,ok){
+  var d=pinDatos();if(!d)return;
+  pinAbrir({t:t,s:'&nbsp;',cancelar:true,cb:function(v){pinHash(v,d.salt).then(function(h){if(h===d.hash)ok();else pinDibujar('PIN incorrecto');});}});
+}
+function pinAccion(a){
+  if(a==='crear')pinCrear();
+  else if(a==='cambiar')pinVerificar('Ingresá tu PIN actual',function(){pinCrear();});
+  else if(a==='quitar')pinVerificar('Ingresá tu PIN para quitarlo',function(){store(claveU('pin'),null);pinCerrar();render();toast('PIN desactivado');});
+  else if(a==='bloquear')bloquear();
+}
+document.addEventListener('click',function(e){
+  if(!PINUI)return;var el=e.target.closest('[data-pk],[data-pkb],[data-pkc],[data-pko]');if(!el)return;
+  if(el.hasAttribute('data-pk'))pinTecla(el.getAttribute('data-pk'));
+  else if(el.hasAttribute('data-pkb'))pinBorrar();
+  else if(el.hasAttribute('data-pkc'))pinCerrar();
+  else pinOlvido();
+});
+document.addEventListener('keydown',function(e){
+  if(!PINUI)return;
+  if(/^[0-9]$/.test(e.key)){pinTecla(e.key);e.preventDefault();}
+  else if(e.key==='Backspace'){pinBorrar();e.preventDefault();}
+  else if(e.key==='Escape'&&PINUI.cancelar){pinCerrar();e.preventDefault();}
+  e.stopPropagation();
+},true);
+document.addEventListener('change',function(e){
+  if(!e.target.matches||!e.target.matches('[data-pinmin]'))return;
+  var d=pinDatos();if(!d)return;d.min=+e.target.value;store(claveU('pin'),d);toast('Listo');
+});
+document.addEventListener('visibilitychange',function(){
+  var d=pinDatos();if(!d||!S.logged)return;
+  if(document.visibilityState==='hidden'){OCULTO=Date.now();if(d.min===0)bloquear();}
+  else if(OCULTO&&Date.now()-OCULTO>=d.min*60000)bloquear();
+});
+['pointerdown','keydown','touchstart'].forEach(function(ev){document.addEventListener(ev,function(){ULT_ACT=Date.now();},true);});
+setInterval(function(){var d=pinDatos();if(d&&S.logged&&!BLOQ&&Date.now()-ULT_ACT>=(d.min||5)*60000)bloquear();},15000);
 
 /* ---------- Render ---------- */
 var RUTAS={inicio:dashboard,calendario:calendario,pacientes:pacientes,pagos:pagos,recordatorios:recordatoriosV,configuracion:configuracion,mas:mas};
@@ -999,7 +1120,7 @@ function abrirPago(id){
 $('#fPago').addEventListener('submit',function(e){e.preventDefault();var f=e.target,t=byId(f.tid.value);t.pagado=true;t.monto=num(f.monto.value)||t.monto;t.medio=f.medio.value;t.fpago=f.fecha.value||HOY;closeOv();render();toast('Pago registrado: '+t.nombre+' · '+plata(t.monto)+' · '+t.medio);});
 function abrirPac(p){
   var f=$('#fPac');f.reset();
-  $('#tPac').textContent=p?'Editar paciente':'Nuevo paciente';$('#bPac').textContent=p?'Guardar cambios':'Guardar paciente';
+  $('#tPac').textContent=p?'Editar paciente':'Nuevo paciente';$$('.segplan').forEach(function(a){if(SSID){a.href='https://docs.google.com/spreadsheets/d/'+SSID+'/edit';a.hidden=false;}else a.hidden=true;});$('#bPac').textContent=p?'Guardar cambios':'Guardar paciente';
   f.pid.value=p?p.id:'';
   ['nombre','dni','nac','tel','email','contacto','obra','estado','motivo'].forEach(function(k){if(p&&p[k]!=null)f[k].value=p[k];});
   f.coseguro.value=p&&p.coseguro?p.coseguro.toLocaleString('es-AR'):'';
@@ -1045,6 +1166,7 @@ document.addEventListener('click',function(e){
   if(g('[data-recf]')){S.recf=el.getAttribute('data-recf');render();return;}
   if(g('[data-rec]')){var a=el.getAttribute('data-rec'),rid=el.getAttribute('data-id');if(a==='enviar'){var R=recordatorios().filter(function(r){return r.id===rid;})[0],pp=R&&pacPorNombre(R.t.nombre);if(!pp||!pp.tel){toast('Cargá el teléfono del paciente para enviarle el mensaje');return;}window.open('https://wa.me/'+telWa(pp.tel)+'?text='+encodeURIComponent(textoRec(R.tipo,R.t)),'_blank');RECX[rid]='enviado';toast('Se abrió WhatsApp con el mensaje listo para enviar');}else if(a==='pausar'){RECX[rid]='pausado';toast('Recordatorio pausado');}else{delete RECX[rid];toast('Recordatorio reactivado');}render();return;}
   if(g('[data-var]')){var k=el.getAttribute('data-k'),ta=$('[data-plant="'+k+'"]'),v='{'+el.getAttribute('data-var')+'}',s=ta.selectionStart||ta.value.length;ta.value=ta.value.slice(0,s)+v+ta.value.slice(ta.selectionEnd||s);ta.focus();ta.setSelectionRange(s+v.length,s+v.length);ta.dispatchEvent(new Event('input'));return;}
+  if(g('[data-pinact]')){pinAccion(el.getAttribute('data-pinact'));return;}
   if(g('[data-cfg]')){S.cfgTab=el.getAttribute('data-cfg');if(cur()!=='configuracion')go('configuracion');else render();return;}
   if(g('[data-tema]')){CFG.tema=el.getAttribute('data-tema');guardarApariencia();render();toast('Colores: '+PALETAS[CFG.tema].n);return;}
   if(g('[data-ilus]')){CFG.ilus=el.getAttribute('data-ilus');guardarApariencia();render();toast('Ilustración actualizada');return;}
@@ -1096,6 +1218,7 @@ aplicarTema();
     var pend=store(claveU('pend'));if(pend&&pend.datos){aplicarDatos(pend.datos,pend.base,true);PENDIENTE=true;}
   }
   render();
+  if(USER&&S.logged&&pinDatos())bloquear();
   if(USER){if(tokenOk())iniciarPlanilla();else mostrarReconectar(true);}
 })();
 })();
