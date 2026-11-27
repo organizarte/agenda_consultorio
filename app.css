@@ -468,3 +468,28 @@ body.locked{overflow:hidden}
 .lk-pad button.lk-txt{border:none;background:none;font-size:13px;color:var(--pd);font-weight:600}
 .tips{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;font-size:14.5px;line-height:1.5}
 .tips a{color:var(--pd)}
+
+/* Suscripción */
+.susbar{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:56;display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--ink,#1F2A22);color:#fff;border-radius:18px;padding:12px 12px 12px 18px;font-size:14.5px;line-height:1.4;box-shadow:0 12px 30px rgba(0,0,0,.2);width:min(720px,92vw)}
+.susbar[hidden]{display:none}
+.susbar span{flex:1 1 260px}
+.susbtns{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.susbar .btn-primary,.susbar .btn-ghost{height:40px}
+.susbar .btn-ghost{background:transparent;color:#fff;border-color:rgba(255,255,255,.4)}
+@media (max-width:860px){.susbar{bottom:84px}}
+.susprecio{display:flex;align-items:baseline;gap:8px;margin:4px 0 12px}
+.susprecio b{font-size:34px;color:var(--pd)}
+.susprecio span{color:var(--muted)}
+#fSus .tips{margin-bottom:14px}
+body.sololectura [data-cfgset],body.sololectura [data-plant],body.sololectura #nTxt{pointer-events:none;opacity:.55}
+body.sololectura .fab{opacity:.5}
+
+.burbuja{white-space:pre-wrap;overflow-wrap:anywhere}
+
+.recstack{display:flex;flex-direction:column;gap:24px;max-width:880px}
+.recaj{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:28px}
+@media (max-width:760px){.recaj{grid-template-columns:minmax(0,1fr)}}
+details.plant summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:10px}
+details.plant summary::-webkit-details-marker{display:none}
+details.plant summary h3::before{content:'›';display:inline-block;margin-right:8px;color:var(--pd);transition:transform .15s}
+details.plant[open] summary h3::before{transform:rotate(90deg)}

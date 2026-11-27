@@ -134,12 +134,13 @@ function T(fecha,hora,nombre,mod,estado,pagado,extra){
 
 /* ---------- Recordatorios ---------- */
 var PLANT={
-  turno:'Hola {paciente}, te confirmo tu sesión del {fecha} a las {hora}. Agendala en tu calendario: {calendario} — Si no podés venir, avisame. {profesional}',
-  semana:'Hola {paciente}, te recuerdo que tenés sesión el {fecha} a las {hora}. Si necesitás cambiar el día, avisame con tiempo. Agendala en tu calendario: {calendario} — {profesional}',
-  sesion:'Hola {paciente}, te recuerdo tu sesión de mañana, {fecha} a las {hora}. Si necesitás reprogramar, avisame. {profesional}',
-  confirmar:'Hola {paciente}, ¿me confirmás tu asistencia a la sesión del {fecha} a las {hora}? Respondé SÍ o NO. Gracias, {profesional}',
-  enlace:'Hola {paciente}, te paso el enlace para la sesión virtual del {fecha} a las {hora}: {enlace} — {profesional}'
+  turno:'¡Hola {paciente}! Te confirmo tu sesión del {fecha} a las {hora}.\nSi no podés venir, avisame.\n{profesional}\n\n📅 Agendala en tu calendario:\n{calendario}',
+  semana:'¡Hola {paciente}! Te recuerdo que tenés sesión el {fecha} a las {hora}.\nSi necesitás cambiar el día, avisame con tiempo.\n{profesional}\n\n📅 Agendala en tu calendario:\n{calendario}',
+  sesion:'¡Hola {paciente}! Te recuerdo tu sesión de mañana, {fecha} a las {hora}.\nSi necesitás reprogramar, avisame.\n{profesional}',
+  confirmar:'¡Hola {paciente}! ¿Me confirmás tu asistencia a la sesión del {fecha} a las {hora}? Respondé SÍ o NO.\nGracias,\n{profesional}\n\n📅 Agendala en tu calendario:\n{calendario}',
+  enlace:'¡Hola {paciente}! Te paso el enlace para la sesión virtual del {fecha} a las {hora}:\n{enlace}\n{profesional}'
 };
+var PLANT_VIEJAS={"turno": "Hola {paciente}, te confirmo tu sesión del {fecha} a las {hora}. Agendala en tu calendario: {calendario} — Si no podés venir, avisame. {profesional}", "semana": "Hola {paciente}, te recuerdo que tenés sesión el {fecha} a las {hora}. Si necesitás cambiar el día, avisame con tiempo. Agendala en tu calendario: {calendario} — {profesional}", "sesion": "Hola {paciente}, te recuerdo tu sesión de mañana, {fecha} a las {hora}. Si necesitás reprogramar, avisame. {profesional}", "confirmar": "Hola {paciente}, ¿me confirmás tu asistencia a la sesión del {fecha} a las {hora}? Respondé SÍ o NO. Gracias, {profesional}", "enlace": "Hola {paciente}, te paso el enlace para la sesión virtual del {fecha} a las {hora}: {enlace} — {profesional}"};
 var REC_TIPO={turno:'Confirmación del turno',semana:'Aviso una semana antes',sesion:'Recordatorio de sesión',confirmar:'Confirmar asistencia',enlace:'Enlace de videollamada'};
 var RECX={}; // cambios manuales: id → 'enviado' | 'pausado'
 function envioDe(t,dias){return add(t.fecha,-dias)+' '+CFG.horaRec;}
@@ -162,13 +163,14 @@ function b64url(o){var b=btoa(unescape(encodeURIComponent(JSON.stringify(o))));r
 function baseApp(){return location.origin+location.pathname.replace(/[^\/]*$/,'');}
 function linkCalendario(t){
   var lugar=t.mod==='v'?(CFG.enlace||''):(CFG.dir||'');
-  var o={f:t.fecha,h:t.hora,m:t.mod,k:CFG.tema||'salvia',i:letra()};if(durMin(t)!==50)o.d=durMin(t);if(lugar)o.l=lugar;if(CFG.prof)o.p=CFG.prof;if(CFG.marca&&CFG.marca!=='Agenda Psicológica')o.c=CFG.marca;return baseApp()+'turno.html#'+b64url(o);
+  var o={f:t.fecha,h:t.hora,m:t.mod,k:CFG.tema||'salvia',i:letra()};if(durMin(t)!==50)o.d=durMin(t);if(lugar)o.l=lugar;if(CFG.prof)o.p=CFG.prof;if(CFG.marca&&CFG.marca!=='Agenda Psicológica')o.c=CFG.marca;var c=[o.f.replace(/-/g,'').slice(2),o.h.replace(':',''),o.m||'',o.k==='salvia'?'':o.k,o.i||'',o.d||'',o.l||'',o.p||'',o.c||''].map(function(x){return String(x).replace(/\|/g,'/');}).join('|').replace(/\|+$/,'');var b=btoa(unescape(encodeURIComponent(c))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');return baseApp()+'turno.html#2'+b;
 }
 function textoRec(tipo,t){
   var d=D(t.fecha),f=DIAS[d.getDay()]+' '+d.getDate()+' de '+MESES[d.getMonth()];
   var txt=PLANT[tipo]||PLANT.turno||'';
   if(txt.indexOf('{calendario}')>=0)txt=txt.replace(/\{calendario\}/g,linkCalendario(t));
-  return txt.replace(/\{paciente\}/g,t.nombre.split(' ')[0]).replace(/\{fecha\}/g,f).replace(/\{hora\}/g,t.hora).replace(/\{profesional\}/g,CFG.prof).replace(/\{enlace\}/g,CFG.enlace);
+  txt=txt.replace(/\{paciente\}/g,t.nombre.split(' ')[0]).replace(/\{fecha\}/g,f).replace(/\{hora\}/g,t.hora).replace(/\{profesional\}/g,CFG.prof||'').replace(/\{enlace\}/g,CFG.enlace||'');
+  return txt.split('\n').map(function(l){return l.replace(/[ \t]+$/,'');}).join('\n').replace(/\n{3,}/g,'\n\n').trim();
 }
 function envioTxt(e){var p=e.split(' ');return corto(p[0])+', '+p[1];}
 
@@ -321,7 +323,7 @@ function aplicarDatos(d,version,local){
   TURNOS.length=0;(d.turnos||[]).forEach(function(t){TURNOS.push(t);});
   if(d.cfg)for(var k in d.cfg)CFG[k]=d.cfg[k];
   if(!CFG.copiaDrive||!CFG.copiaDrive.hojas)CFG.copiaDrive={activo:false,frec:'mensual',hojas:{pac:true,tur:true,pag:true,res:true},tema:'',ultima:''};
-  if(d.plant)for(var k2 in d.plant)PLANT[k2]=d.plant[k2];
+  if(d.plant)for(var k2 in d.plant){if(PLANT_VIEJAS[k2]&&d.plant[k2]===PLANT_VIEJAS[k2])continue;PLANT[k2]=d.plant[k2];}
   for(var k3 in RECX)delete RECX[k3];if(d.recx)for(var k4 in d.recx)RECX[k4]=d.recx[k4];
   if(version!=null)VERSION=version;
   ULTIMO=JSON.stringify(estadoDatos());
@@ -824,19 +826,16 @@ function recordatoriosV(){
     return '<div class="rec" style="flex-direction:row;align-items:center;gap:14px;flex-wrap:wrap"><span class="av '+color(r.t.nombre)+'">'+ini(r.t.nombre)+'</span><div style="flex:1;min-width:200px;display:flex;flex-direction:column;gap:3px"><div class="top" style="justify-content:flex-start;gap:10px">'+esc(r.t.nombre)+'<span class="tag t-'+r.estado+'">'+r.estado+'</span></div><div class="dt">'+(r.tipo==='semana'?'Una semana antes':'El día anterior · '+REC_TIPO[r.tipo].toLowerCase())+' · sesión '+corto(r.t.fecha).toLowerCase()+' '+r.t.hora+'</div><div class="dt">'+ico('i-clock',13,1.8)+' '+(r.estado==='enviado'?'Enviado ':'Envío ')+envioTxt(r.envio).toLowerCase()+'</div></div><div style="display:flex;gap:6px">'+acc+'</div><details style="width:100%"><summary class="link" style="font-size:13.5px;cursor:pointer">Ver mensaje</summary><div class="burbuja" style="margin-top:10px">'+esc(textoRec(r.tipo,r.t))+'</div></details></div>';
   }).join('')||'<div class="note" style="padding:12px 0">No hay recordatorios '+(S.recf==='proximos'?'programados':'enviados')+'.</div>';
   var ej=ejemploTurno();
-  function plant(k){return '<div class="plant"><div class="card-h"><h3>'+REC_TIPO[k]+'</h3><span class="note">'+({turno:'Al agendar, con el botón WhatsApp del turno',semana:'7 días antes',sesion:'Día anterior · confirmados',confirmar:'Día anterior · sin confirmar',enlace:'Día anterior · virtuales'})[k]+'</span></div><textarea data-plant="'+k+'" aria-label="Plantilla '+REC_TIPO[k]+'">'+esc(PLANT[k])+'</textarea><div class="vars">'+['paciente','fecha','hora','profesional','enlace','calendario'].map(function(v){return '<button type="button" data-var="'+v+'" data-k="'+k+'">{'+v+'}</button>';}).join('')+'</div><div class="note">Vista previa:</div><div class="burbuja" data-prev="'+k+'">'+esc(textoRec(k,ej))+'</div></div>';}
+  function plant(k){return '<details class="plant"><summary class="card-h"><h3>'+REC_TIPO[k]+'</h3><span class="note">'+({turno:'Al agendar, con el botón WhatsApp del turno',semana:'7 días antes',sesion:'Día anterior · confirmados',confirmar:'Día anterior · sin confirmar',enlace:'Día anterior · virtuales'})[k]+'</span></summary><textarea data-plant="'+k+'" aria-label="Plantilla '+REC_TIPO[k]+'">'+esc(PLANT[k])+'</textarea><div class="vars">'+['paciente','fecha','hora','profesional','enlace','calendario'].map(function(v){return '<button type="button" data-var="'+v+'" data-k="'+k+'">{'+v+'}</button>';}).join('')+'</div><div class="note">Vista previa:</div><div class="burbuja" data-prev="'+k+'">'+esc(textoRec(k,ej))+'</div></details>';}
   function tb(id,l,n){return '<button data-recf="'+id+'" aria-pressed="'+(S.recf===id)+'">'+l+'<span class="c">'+n+'</span></button>';}
   return '<header class="head"><div><h1>Recordatorios</h1><div class="sub">Cada turno se recuerda solo: una semana antes y el día anterior.</div></div></header>'+
-  '<div class="cols"><section class="card" style="gap:14px"><div class="toolbar"><div class="tabs" role="group">'+tb('proximos','Programados',prog.length)+tb('enviados','Enviados',env.length)+'</div></div>'+filas+'<div class="note">Los avisos no salen solos: cuando llega el día, tocá <b>Enviar ahora</b> y se abre WhatsApp con el mensaje listo para mandar.</div></section>'+
-  '<div style="display:flex;flex-direction:column;gap:24px"><section class="card" style="padding:24px;gap:0"><h2 style="font-size:22px;margin-bottom:8px">Ajustes</h2>'+
+  '<div class="recstack"><section class="card" style="gap:14px"><div class="toolbar"><div class="tabs" role="group">'+tb('proximos','Programados',prog.length)+tb('enviados','Enviados',env.length)+'</div></div>'+filas+'<div class="note">Los avisos no salen solos: cuando llega el día, tocá <b>Enviar ahora</b> y se abre WhatsApp con el mensaje listo para mandar.</div></section>'+
+  '<section class="card" style="padding:24px;gap:0"><h2 style="font-size:22px;margin-bottom:8px">Ajustes</h2><div class="recaj">'+
   '<label class="sw"><span class="txt">Recordatorios automáticos<span>Se programan solos al agendar un turno</span></span><input type="checkbox" data-cfgset="autoRec"'+(CFG.autoRec?' checked':'')+'></label>'+
   '<label class="sw"><span class="txt">Una semana antes<span>Aviso 7 días antes de cada turno</span></span><input type="checkbox" data-cfgset="avisoSemana"'+(CFG.avisoSemana?' checked':'')+'></label>'+
   '<label class="sw"><span class="txt">El día anterior<span>Recordatorio, confirmación o enlace, según el turno</span></span><input type="checkbox" data-cfgset="avisoDia"'+(CFG.avisoDia?' checked':'')+'></label>'+
-  '<div class="sw" style="cursor:default"><span class="txt">Hora de envío<span>A qué hora salen los avisos</span></span><select data-cfgset="horaRec" style="font:inherit;border:1px solid var(--line2);border-radius:12px;padding:9px 10px;background:#fff">'+['08:00','09:00','10:00','11:00','12:00','16:00','18:00','20:00'].map(function(h){return '<option'+(CFG.horaRec===h?' selected':'')+'>'+h+'</option>';}).join('')+'</select></div>'+
-
-  '<label class="sw"><span class="txt">WhatsApp <span class="soon-tag" style="display:inline">próximamente</span><span>Envío desde tu número del consultorio</span></span><input type="checkbox" disabled></label>'+
-  '<label class="sw"><span class="txt">Correo electrónico <span class="soon-tag" style="display:inline">próximamente</span><span>Para pacientes con email cargado</span></span><input type="checkbox" disabled></label></section>'+
-  '<section class="card" style="padding:24px;gap:0"><h2 style="font-size:22px;margin-bottom:4px">Mensajes</h2><div class="note" style="margin-bottom:6px">Tocá una variable para sumarla al texto.</div>'+plant('turno')+plant('semana')+plant('sesion')+plant('confirmar')+plant('enlace')+'</section></div></div>';
+  '<div class="sw" style="cursor:default"><span class="txt">Hora de envío<span>A qué hora quedan listos para enviar</span></span><select data-cfgset="horaRec" style="font:inherit;border:1px solid var(--line2);border-radius:12px;padding:9px 10px;background:#fff">'+['08:00','09:00','10:00','11:00','12:00','16:00','18:00','20:00'].map(function(h){return '<option'+(CFG.horaRec===h?' selected':'')+'>'+h+'</option>';}).join('')+'</select></div></div></section>'+
+  '<section class="card" style="padding:24px;gap:0"><h2 style="font-size:22px;margin-bottom:4px">Mensajes</h2><div class="note" style="margin-bottom:6px">Tocá un mensaje para editarlo. Tocá una variable para sumarla al texto.</div>'+plant('turno')+plant('semana')+plant('sesion')+plant('confirmar')+plant('enlace')+'</section></div>';
 }
 
 /* ================= CONFIGURACIÓN ================= */
