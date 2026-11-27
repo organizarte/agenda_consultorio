@@ -89,18 +89,17 @@ a.link{color:var(--pd)}
 
   // Horario de Argentina (UTC-3, sin cambio de hora) → UTC para el calendario
   function utc(d){var u=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate(),d.getHours()+3,d.getMinutes()));return u.getUTCFullYear()+z(u.getUTCMonth()+1)+z(u.getUTCDate())+'T'+z(u.getUTCHours())+z(u.getUTCMinutes())+'00Z';}
-  var gcal='https://calendar.google.com/calendar/render?action=TEMPLATE'+
+  var gq='action=TEMPLATE'+
     '&text='+encodeURIComponent(titulo)+
     '&dates='+utc(ini)+'/'+utc(fin)+
     '&details='+encodeURIComponent(detalle)+
     (lugar?'&location='+encodeURIComponent(virtual?urlLugar:lugar):'')+
     '&ctz=America/Argentina/Buenos_Aires';
+  var gcal='https://calendar.google.com/calendar/render?'+gq;
+  // En Android este formato lo abre la app Google Calendar (si está instalada) en vez del navegador
+  var gcalApp='https://www.google.com/calendar/event?'+gq;
   function ms(d){return Date.UTC(d.getFullYear(),d.getMonth(),d.getDate(),d.getHours()+3,d.getMinutes());}
   function iv(s){return encodeURIComponent(String(s)).replace(/;/g,'%3B');}
-  // Android: abre la pantalla "nuevo evento" de la app de calendario del celular (si falla, Google Calendar web)
-  var andCal='intent:#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.item/event;'+
-    'S.title='+iv(titulo)+';S.description='+iv(detalle)+(lugar?';S.eventLocation='+iv(virtual?urlLugar:lugar):'')+
-    ';l.beginTime='+ms(ini)+';l.endTime='+ms(fin)+';S.browser_fallback_url='+encodeURIComponent(gcal)+';end';
   function icsTxt(t){return String(t).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');}
   var ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Agenda Psicologica//Turno//ES','CALSCALE:GREGORIAN','METHOD:PUBLISH','BEGIN:VEVENT',
     'UID:'+T.f.replace(/-/g,'')+T.h.replace(':','')+'-'+Math.random().toString(36).slice(2)+'@agenda',
@@ -140,7 +139,7 @@ a.link{color:var(--pd)}
       (ios?
         '<a class="btn pri" href="'+icsUrl+'" download="turno.ics">'+ico.apple+'Agregar a mi calendario</a><a class="btn sec" href="'+gcal+'" target="_blank" rel="noopener">'+ico.cal+'Agregar a Google Calendar</a>':
        android?
-        '<a class="btn pri" href="'+andCal+'">'+ico.cal+'Agregar a mi calendario</a><a class="btn sec" href="'+gcal+'" target="_blank" rel="noopener">'+ico.g.replace('#fff','#4285F4')+'Abrir en Google Calendar web</a>':
+        '<a class="btn pri" href="'+gcalApp+'" target="_blank" rel="noopener">'+ico.cal+'Agregar a mi calendario</a><a class="btn sec" href="'+gcal+'" target="_blank" rel="noopener">'+ico.g.replace('#fff','#4285F4')+'Abrir en Google Calendar web</a>':
         '<a class="btn pri" href="'+gcal+'" target="_blank" rel="noopener">'+ico.g+'Agregar a Google Calendar</a><a class="btn sec" href="'+icsUrl+'" download="turno.ics">'+ico.cal+'Outlook, iPhone o calendario de la compu</a>')+
       (virtual&&urlLugar?'<a class="btn sec" href="'+esc(urlLugar)+'" target="_blank" rel="noopener">'+ico.vid+'Abrir la videollamada</a>':'')+
     '</div>'+
