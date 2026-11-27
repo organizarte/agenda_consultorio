@@ -493,3 +493,5 @@ details.plant summary{cursor:pointer;list-style:none;display:flex;justify-conten
 details.plant summary::-webkit-details-marker{display:none}
 details.plant summary h3::before{content:'›';display:inline-block;margin-right:8px;color:var(--pd);transition:transform .15s}
 details.plant[open] summary h3::before{transform:rotate(90deg)}
+
+.side .actualizar{margin-bottom:10px;color:var(--muted);font-size:14.5px}

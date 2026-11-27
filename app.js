@@ -914,7 +914,7 @@ function authV(modo){
 }
 
 /* ================= OTRAS ================= */
-function mas(){return '<header class="head"><h1>Más</h1></header><div class="card" style="gap:4px">'+[['recordatorios','Recordatorios','i-bell'],['configuracion','Configuración','i-set']].map(function(n){return '<button class="nav-a" data-go="'+n[0]+'">'+ico(n[2])+n[1]+'</button>';}).join('')+'<button class="nav-a" data-salir>'+ico('i-logout')+'Cerrar sesión</button></div>';}
+function mas(){return '<header class="head"><h1>Más</h1></header><div class="card" style="gap:4px">'+[['recordatorios','Recordatorios','i-bell'],['configuracion','Configuración','i-set']].map(function(n){return '<button class="nav-a" data-go="'+n[0]+'">'+ico(n[2])+n[1]+'</button>';}).join('')+'<button class="nav-a" data-actualizar>'+ico('i-refresh')+'Actualizar app</button><button class="nav-a" data-salir>'+ico('i-logout')+'Cerrar sesión</button></div>';}
 
 /* ================= SUSCRIPCIÓN (portero) =================
    Si config.js tiene AP_PORTERO_URL, la app le pregunta al portero si esta cuenta puede cargar datos.
@@ -1102,6 +1102,14 @@ document.addEventListener('visibilitychange',function(){
 ['pointerdown','keydown','touchstart'].forEach(function(ev){document.addEventListener(ev,function(){ULT_ACT=Date.now();},true);});
 setInterval(function(){var d=pinDatos();if(d&&S.logged&&!BLOQ&&Date.now()-ULT_ACT>=(d.min||5)*60000)bloquear();},15000);
 
+function actualizarApp(){
+  toast('Actualizando la app…');
+  if(PENDIENTE&&!soloLectura())try{enviar();}catch(e){}
+  var p=[];
+  try{if(navigator.serviceWorker&&navigator.serviceWorker.getRegistrations)p.push(navigator.serviceWorker.getRegistrations().then(function(rs){return Promise.all(rs.map(function(r){return r.unregister();}));}));}catch(e){}
+  try{if(window.caches)p.push(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){return caches.delete(k);}));}));}catch(e){}
+  Promise.all(p).catch(function(){}).then(function(){setTimeout(function(){location.replace(location.pathname+'?v='+Date.now()+location.hash);},PENDIENTE?1500:300);});
+}
 /* ---------- Render ---------- */
 var RUTAS={inicio:dashboard,calendario:calendario,pacientes:pacientes,pagos:pagos,recordatorios:recordatoriosV,configuracion:configuracion,mas:mas};
 function cur(){var h=(location.hash||'').slice(1);if(h==='ingresar')return h;if(/^paciente-\d+$/.test(h))return h;return RUTAS[h]?h:'inicio';}
@@ -1267,6 +1275,7 @@ document.addEventListener('click',function(e){
   if(g('[data-wturno]')){var tw=byId(el.getAttribute('data-wturno')),pw=pacPorNombre(tw.nombre);if(!pw||!pw.tel){toast('Cargá el teléfono del paciente para mandarle el turno');return;}window.open('https://wa.me/'+telWa(pw.tel)+'?text='+encodeURIComponent(textoRec('turno',tw)),'_blank');toast('Se abrió WhatsApp con el turno y el link al calendario');return;}
   if(g('[data-xatema]')){CFG.copiaDrive.tema=el.getAttribute('data-xatema');render();toast('Colores de las copias: '+PALETAS[CFG.copiaDrive.tema].n);return;}
   if(g('[data-copiaya]')){guardarCopiaAhora(el);return;}
+  if(g('[data-actualizar]')){actualizarApp();return;}
   if(g('[data-salir]')){salir();toast('Sesión cerrada');return;}
   if(g('[data-dia-at]')){return;}
   if(g('[data-lugar]')){var a=el.getAttribute('data-lugar');if(a==='nuevo'){CFG.lugares.push({nombre:'',dias:[],desde:'09:00',hasta:'13:00'});render();var ins=$$('[data-k=nombre]');if(ins.length)ins[ins.length-1].focus();}else{CFG.lugares.splice(+el.getAttribute('data-i'),1);render();toast('Lugar quitado');}return;}
@@ -1303,7 +1312,7 @@ aplicarTema();
   }
   susCargar();
   render();susUI();
-  if(/[?&]pago=/.test(location.search)){try{history.replaceState(null,'',location.pathname+location.hash);}catch(e){}}
+  if(location.search){try{history.replaceState(null,'',location.pathname+location.hash);}catch(e){}}
   if(USER&&S.logged){verificarSus(true);}
   if(USER&&S.logged&&pinDatos())bloquear();
   if(USER){if(tokenOk())iniciarPlanilla();else mostrarReconectar(true);}
